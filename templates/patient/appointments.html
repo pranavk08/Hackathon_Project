@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}My Appointments - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-primary mb-4">My Appointments</h1>
+
+    <!-- Appointments List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Appointments</h2>
+        </div>
+        <div class="card-body">
+            {% if appointments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Doctor</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in appointments %}
+                                <tr>
+                                    <td>{{ appt.date }}</td>
+                                    <td>{{ appt.time_slot }}</td>
+                                    <td>Dr. {{ appt.doctor_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if appt.status == 'completed' else 'warning' if appt.status == 'scheduled' else 'danger' }}">
+                                            {{ appt.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if appt.status == 'scheduled' %}
+                                            <a href="{{ url_for('view_appointment', appointment_id=appt._id) }}" class="btn btn-sm btn-primary">View</a>
+                                            <form method="POST" action="{{ url_for('cancel_appointment', appointment_id=appt._id) }}" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
+                                            </form>
+                                        {% else %}
+                                            <a href="{{ url_for('view_appointment', appointment_id=appt._id) }}" class="btn btn-sm btn-primary">View</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No appointments found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

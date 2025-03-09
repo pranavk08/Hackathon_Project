@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Book Appointment - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-primary mb-4">Book an Appointment</h1>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Select Doctor and Time</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('book_appointment') }}">
+                <div class="mb-3">
+                    <label for="doctor" class="form-label">Select Doctor</label>
+                    <select class="form-select" id="doctor" name="doctor_id" required>
+                        <option value="" disabled selected>Choose a doctor</option>
+                        {% for doctor in doctors %}
+                            <option value="{{ doctor._id }}">Dr. {{ doctor.name }} ({{ doctor.specialization }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="date" class="form-label">Select Date</label>
+                    <input type="date" class="form-control" id="date" name="date" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time_slot" class="form-label">Select Time Slot</label>
+                    <select class="form-select" id="time_slot" name="time_slot" required>
+                        <option value="" disabled selected>Choose a time slot</option>
+                        <!-- Time slots will be populated dynamically via JavaScript -->
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason for Appointment</label>
+                    <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Book Appointment</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // JavaScript to fetch available time slots based on selected doctor and date
+    document.getElementById('doctor').addEventListener('change', function() {
+        const doctorId = this.value;
+        const date = document.getElementById('date').value;
+        if (doctorId && date) {
+            fetch(`/api/available_slots?doctor_id=${doctorId}&date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    const timeSlotSelect = document.getElementById('time_slot');
+                    timeSlotSelect.innerHTML = '<option value="" disabled selected>Choose a time slot</option>';
+                    data.slots.forEach(slot => {
+                        const option = document.createElement('option');
+                        option.value = slot;
+                        option.textContent = slot;
+                        timeSlotSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

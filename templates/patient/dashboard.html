@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Dashboard - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-primary mb-4">Welcome, {{ current_user.name }}</h1>
+
+    <!-- Upcoming Appointments -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Upcoming Appointments</h2>
+        </div>
+        <div class="card-body">
+            {% if upcoming_appointments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Doctor</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in upcoming_appointments %}
+                                <tr>
+                                    <td>{{ appt.date }}</td>
+                                    <td>{{ appt.time_slot }}</td>
+                                    <td>Dr. {{ appt.doctor_name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if appt.status == 'scheduled' else 'warning' }}">
+                                            {{ appt.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('view_appointment', appointment_id=appt._id) }}" class="btn btn-sm btn-primary">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No upcoming appointments.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Queue Status -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Queue Status</h2>
+        </div>
+        <div class="card-body">
+            {% if queue_status %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Appointment</th>
+                                <th>Position in Queue</th>
+                                <th>Estimated Wait Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt_id, status in queue_status.items() %}
+                                <tr>
+                                    <td>{{ appt_id }}</td>
+                                    <td>{{ status.position }}</td>
+                                    <td>{{ status.wait_time }} minutes</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No active queues.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
