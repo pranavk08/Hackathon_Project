@@ -59,31 +59,41 @@ class Appointment:
     
     @staticmethod
     def get_by_doctor(doctor_id, date=None, status=None, future_only=False):
-        """
-        Retrieve appointments for a specific doctor.
+        """Get appointments for a doctor.
         
         Args:
-            doctor_id (str): The ID of the doctor.
-            date (str, optional): Filter appointments by date (YYYY-MM-DD).
-            status (str or list, optional): Filter appointments by status.
-            future_only (bool, optional): If True, only return appointments with future dates.
+            doctor_id: The ID of the doctor
+            date (str, optional): Filter appointments by date (YYYY-MM-DD)
+            status (str or list, optional): Filter appointments by status
+            future_only (bool, optional): If True, only return appointments with future dates
         
         Returns:
-            list: A list of appointments matching the criteria.
+            list: A list of appointments matching the criteria
         """
-        query = {"doctor_id": doctor_id}
+        query = {'doctor_id': ObjectId(doctor_id)}
         
         # Filter by date if provided
         if date:
-            query["date"] = date
+            query['date'] = date
         
         # Filter by status if provided
         if status:
             if isinstance(status, list):
-                query["status"] = {"$in": status}
+                query['status'] = {'$in': status}
             else:
-                query["status"] = status
+                query['status'] = status
         
+        # Filter for future appointments if future_only is True
+        if future_only:
+            today = datetime.utcnow().strftime('%Y-%m-%d')
+            if 'date' in query:
+                # If date is already specified, make sure it's in the future
+                if query['date'] < today:
+                    return []  # No need to query if the date is in the past
+            else:
+                query['date'] = {'$gte': today}
+        
+        # Join with patient information
         pipeline = [
             {'$match': query},
             {'$lookup': {
@@ -99,38 +109,6 @@ class Appointment:
         ]
         
         return list(appointments.aggregate(pipeline))
-        # Filter for future appointments if future_only is True
-        # if future_only:
-        #     today = datetime.utcnow().strftime('%Y-%m-%d')
-        #     query["date"] = {"$gte": today}
-        
-        # # Fetch appointments from the database
-        # appointments = db.appointments.find(query)
-        # return list(appointments)
-    # def get_by_doctor(doctor_id, date=None, status=None):
-    #     """Get appointments for a doctor."""
-    #     query = {'doctor_id': ObjectId(doctor_id)}
-    #     if date:
-    #         query['date'] = date
-    #     if status:
-    #         query['status'] = status
-            
-    #     # Join with patient information
-    #     pipeline = [
-    #         {'$match': query},
-    #         {'$lookup': {
-    #             'from': 'users',
-    #             'localField': 'patient_id',
-    #             'foreignField': '_id',
-    #             'as': 'patient'
-    #         }},
-    #         {'$unwind': '$patient'},
-    #         {'$project': {
-    #             'patient_password': 0
-    #         }}
-    #     ]
-        
-    #     return list(appointments.aggregate(pipeline))
     
     @staticmethod
     def update_status(appointment_id, status, additional_data=None):
