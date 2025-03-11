@@ -4,50 +4,258 @@
 
 {% block content %}
 <div class="container mt-4">
+    <script>
+        function updateAppointments() {
+            fetch('/api/doctor/appointments')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error('Error fetching appointments:', data.error);
+                        return;
+                    }
+                    
+                    // Update queue metrics
+                    updateQueueMetrics(data.queue_metrics);
+                    
+                    // Update upcoming appointments
+                    const upcomingBody = document.getElementById('upcomingTableBody');
+                    if (upcomingBody) {
+                        if (data.upcoming && data.upcoming.length > 0) {
+                            upcomingBody.innerHTML = data.upcoming.map(appt => `
+                                <tr>
+                                    <td>${appt.date}</td>
+                                    <td>${appt.time_slot}</td>
+                                    <td>${appt.patient_name}<br>
+                                        <small class="text-muted">${appt.patient_phone || 'No phone'}</small>
+                                    </td>
+                                    <td>${appt.department}</td>
+                                    <td>${appt.reason || '-'}</td>
+                                    <td>
+                                        <span class="badge bg-${getStatusColor(appt.status)}">
+                                            ${appt.status}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary me-1" 
+                                                onclick="showAppointmentDetails('${JSON.stringify(appt).replace(/'/g, "\\'")}')">
+                                            Details
+                                        </button>
+                                        ${appt.status === 'scheduled' ? 
+                                            `<a href="/appointment/${appt._id}/reschedule" class="btn btn-sm btn-warning">
+                                                Reschedule
+                                            </a>` : ''
+                                        }
+                                    </td>
+                                </tr>
+                            `).join('');
+                        } else {
+                            upcomingBody.innerHTML = '<tr><td colspan="7" class="text-muted">No upcoming appointments.</td></tr>';
+                        }
+                    }
+
+                    // Update today's appointments
+                    const todayBody = document.getElementById('todayTableBody');
+                    if (todayBody) {
+                        if (data.today && data.today.length > 0) {
+                            todayBody.innerHTML = data.today.map(appt => `
+                                <tr>
+                                    <td>${appt.time_slot}</td>
+                                    <td>${appt.patient_name}<br>
+                                        <small class="text-muted">${appt.patient_phone || 'No phone'}</small>
+                                    </td>
+                                    <td>${appt.department}</td>
+                                    <td>${appt.reason || '-'}</td>
+                                    <td>
+                                        <span class="badge bg-${getStatusColor(appt.status)}">
+                                            ${appt.status}
+                                        </span>
+                                        ${appt.queue_info ? 
+                                            `<br><small class="text-muted">
+                                                Queue: #${appt.queue_info.position} 
+                                                (${appt.queue_info.wait_time || 'N/A'} min wait)
+                                            </small>` : ''
+                                        }
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary me-1" 
+                                                onclick="showAppointmentDetails('${JSON.stringify(appt).replace(/'/g, "\\'")}')">
+                                            Details
+                                        </button>
+                                        ${getActionButton(appt)}
+                                    </td>
+                                </tr>
+                            `).join('');
+                        } else {
+                            todayBody.innerHTML = '<tr><td colspan="6" class="text-muted">No appointments for today.</td></tr>';
+                        }
+                    }
+                });
+        }
+
+        function updateQueueMetrics(metrics) {
+            document.getElementById('waiting-count').textContent = metrics.waiting;
+            document.getElementById('scheduled-count').textContent = metrics.scheduled;
+            document.getElementById('in-progress-count').textContent = metrics.in_progress;
+            document.getElementById('completed-count').textContent = metrics.completed;
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'scheduled': return 'primary';
+                case 'checked-in': return 'warning';
+                case 'in-progress': return 'info';
+                case 'completed': return 'success';
+                case 'cancelled': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        function getActionButton(appt) {
+            if (appt.status === 'checked-in') {
+                return `<form method="POST" action="/doctor/start_appointment/${appt._id}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-success">Start</button>
+                </form>`;
+            } else if (appt.status === 'in-progress') {
+                return `<form method="POST" action="/doctor/complete_appointment/${appt._id}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-info">Complete</button>
+                </form>`;
+            }
+            return '';
+        }
+
+        function showAppointmentDetails(apptData) {
+            const appt = JSON.parse(apptData);
+            const modalContent = `
+                <div class="modal-header">
+                    <h5 class="modal-title">Appointment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Patient Name</dt>
+                        <dd class="col-sm-8">${appt.patient_name}</dd>
+                        
+                        <dt class="col-sm-4">Phone</dt>
+                        <dd class="col-sm-8">${appt.patient_phone || 'Not provided'}</dd>
+                        
+                        <dt class="col-sm-4">Date</dt>
+                        <dd class="col-sm-8">${appt.date}</dd>
+                        
+                        <dt class="col-sm-4">Time</dt>
+                        <dd class="col-sm-8">${appt.time_slot}</dd>
+                        
+                        <dt class="col-sm-4">Department</dt>
+                        <dd class="col-sm-8">${appt.department}</dd>
+                        
+                        <dt class="col-sm-4">Reason</dt>
+                        <dd class="col-sm-8">${appt.reason || 'Not specified'}</dd>
+                        
+                        <dt class="col-sm-4">Priority</dt>
+                        <dd class="col-sm-8">${appt.priority || 'Normal'}</dd>
+                        
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-${getStatusColor(appt.status)}">${appt.status}</span>
+                        </dd>
+                        
+                        ${appt.queue_info ? `
+                            <dt class="col-sm-4">Queue Position</dt>
+                            <dd class="col-sm-8">#${appt.queue_info.position}</dd>
+                            
+                            <dt class="col-sm-4">Est. Wait Time</dt>
+                            <dd class="col-sm-8">${appt.queue_info.wait_time || 'N/A'} minutes</dd>
+                        ` : ''}
+                        
+                        <dt class="col-sm-4">Created At</dt>
+                        <dd class="col-sm-8">${new Date(appt.created_at).toLocaleString()}</dd>
+                    </dl>
+                </div>
+            `;
+            
+            const modalDialog = document.createElement('div');
+            modalDialog.className = 'modal-dialog';
+            modalDialog.innerHTML = modalContent;
+            
+            const modal = document.getElementById('appointmentModal');
+            modal.querySelector('.modal-content').innerHTML = modalContent;
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        }
+
+        // Update every 30 seconds
+        setInterval(updateAppointments, 30000);
+        // Initial update
+        updateAppointments();
+    </script>
+
     <h1 class="text-primary mb-4">Welcome, Dr. {{ current_user.name }}</h1>
+    
+    <!-- Queue Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Waiting</h5>
+                    <h2 id="waiting-count" class="mb-0">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Scheduled</h5>
+                    <h2 id="scheduled-count" class="mb-0">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">In Progress</h5>
+                    <h2 id="in-progress-count" class="mb-0">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Completed</h5>
+                    <h2 id="completed-count" class="mb-0">-</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Refresh button -->
+    <div class="d-flex justify-content-end mb-3">
+        <button onclick="updateAppointments();" class="btn btn-outline-primary">
+            <i class="fas fa-sync-alt"></i> Refresh Dashboard
+        </button>
+    </div>
 
     <!-- Today's Appointments -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
-            <h2 class="h5 mb-0">Today's Appointments</h2>
+            <h2 class="h5 mb-0">Today's Appointments ({{ current_date }})</h2>
         </div>
         <div class="card-body">
-            {% if todays_appointments %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Patient</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for appt in todays_appointments %}
-                                <tr>
-                                    <td>{{ appt.time_slot }}</td>
-                                    <td>{{ appt.patient_name }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if appt.status == 'checked-in' else 'warning' }}">
-                                            {{ appt.status }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if appt.status == 'checked-in' %}
-                                            <form method="POST" action="{{ url_for('start_appointment', appointment_id=appt._id) }}" class="d-inline">
-                                                <button type="submit" class="btn btn-sm btn-primary">Start</button>
-                                            </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-muted">No appointments scheduled for today.</p>
-            {% endif %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Patient</th>
+                            <th>Department</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayTableBody">
+                        <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -57,36 +265,33 @@
             <h2 class="h5 mb-0">Upcoming Appointments</h2>
         </div>
         <div class="card-body">
-            {% if upcoming %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Patient</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for appt in upcoming %}
-                                <tr>
-                                    <td>{{ appt.date }}</td>
-                                    <td>{{ appt.time_slot }}</td>
-                                    <td>{{ appt.patient_name }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if appt.status == 'scheduled' else 'warning' }}">
-                                            {{ appt.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-muted">No upcoming appointments.</p>
-            {% endif %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Patient</th>
+                            <th>Department</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcomingTableBody">
+                        <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment Details Modal -->
+    <div class="modal fade" id="appointmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- Content will be dynamically inserted here -->
+            </div>
         </div>
     </div>
 </div>

@@ -4,21 +4,40 @@
 
 {% block content %}
 <div class="container mt-4">
-    <!-- Add debug information -->
-    {% if debug %}
-    <div class="alert alert-info">
-        <pre>{{ upcoming_appointments|tojson }}</pre>
-    </div>
-    {% endif %}
-
-    <!-- Add auto-refresh every 30 seconds -->
-    <script>
-        setTimeout(function() {
-            window.location.reload();
-        }, 30000);  // Refresh every 30 seconds
-    </script>
-
     <h1 class="text-primary mb-4">Welcome, {{ current_user.name }}</h1>
+    
+    <div id="errorAlert" class="alert alert-danger d-none" role="alert"></div>
+    
+    <!-- Today's Appointments -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Today's Appointments</h2>
+            <button onclick="updateAppointments()" class="btn btn-sm btn-light">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time Slot</th>
+                            <th>Doctor</th>
+                            <th>Department</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Wait Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayTableBody">
+                        <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <!-- Upcoming Appointments -->
     <div class="card shadow-sm mb-4">
@@ -26,74 +45,179 @@
             <h2 class="h5 mb-0">Upcoming Appointments</h2>
         </div>
         <div class="card-body">
-            {% if upcoming_appointments %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Time</th>
-                                <th>Doctor</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for appt in upcoming_appointments %}
-                                <tr>
-                                    <td>{{ appt.date }}</td>
-                                    <td>{{ appt.time_slot }}</td>
-                                    <td>Dr. {{ appt.doctor_name }}</td>
-                                    <td>
-                                        <span class="badge bg-{{ 'success' if appt.status == 'scheduled' else 'warning' }}">
-                                            {{ appt.status }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('view_appointment', appointment_id=appt._id) }}" class="btn btn-sm btn-primary">View</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-muted">No upcoming appointments.</p>
-            {% endif %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time Slot</th>
+                            <th>Doctor</th>
+                            <th>Department</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcomingTableBody">
+                        <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- Queue Status -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <h2 class="h5 mb-0">Queue Status</h2>
-        </div>
-        <div class="card-body">
-            {% if queue_status %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Appointment</th>
-                                <th>Position in Queue</th>
-                                <th>Estimated Wait Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for appt_id, status in queue_status.items() %}
-                                <tr>
-                                    <td>{{ appt_id }}</td>
-                                    <td>{{ status.position }}</td>
-                                    <td>{{ status.wait_time }} minutes</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <!-- Appointment Details Modal -->
+    <div class="modal fade" id="appointmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Appointment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-            {% else %}
-                <p class="text-muted">No active queues.</p>
-            {% endif %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Appointment ID:</strong> <span id="modal-id"></span></p>
+                            <p><strong>Date:</strong> <span id="modal-date"></span></p>
+                            <p><strong>Time Slot:</strong> <span id="modal-time"></span></p>
+                            <p><strong>Department:</strong> <span id="modal-dept"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Doctor:</strong> <span id="modal-doctor"></span></p>
+                            <p><strong>Status:</strong> <span id="modal-status"></span></p>
+                            <p><strong>Priority:</strong> <span id="modal-priority"></span></p>
+                            <p><strong>Reason:</strong> <span id="modal-reason"></span></p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Timing Information</h6>
+                            <p><strong>Created At:</strong> <span id="modal-created"></span></p>
+                            <p><strong>Start Time:</strong> <span id="modal-start"></span></p>
+                            <p><strong>End Time:</strong> <span id="modal-end"></span></p>
+                            <p><strong>Estimated Wait Time:</strong> <span id="modal-wait"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+function updateAppointments() {
+    const errorAlert = document.getElementById('errorAlert');
+    errorAlert.classList.add('d-none');
+    
+    fetch('/api/patient/appointments')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            updateTable('todayTableBody', data.today, true);
+            updateTable('upcomingTableBody', data.upcoming, false);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorAlert.textContent = `Error loading appointments: ${error.message}`;
+            errorAlert.classList.remove('d-none');
+        });
+}
+
+function updateTable(tableId, appointments, isToday) {
+    const tbody = document.getElementById(tableId);
+    if (!appointments || appointments.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center">No appointments ${isToday ? 'today' : 'scheduled'}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = appointments.map(appt => `
+        <tr>
+            ${!isToday ? `<td>${appt.date}</td>` : ''}
+            <td>${appt.time_slot}</td>
+            <td>Dr. ${appt.doctor_name}</td>
+            <td>${appt.department}</td>
+            <td>${appt.reason}</td>
+            <td><span class="badge bg-${getStatusColor(appt.status)}">${appt.status}</span></td>
+            <td><span class="badge bg-info">${appt.priority || 'Normal'}</span></td>
+            <td>${appt.estimated_wait_time || (appt.queue_info ? `~${appt.queue_info.wait_time} min` : '-')}</td>
+            <td>
+                <button onclick="viewAppointmentDetails(${JSON.stringify(appt)})" class="btn btn-sm btn-info">
+                    <i class="fas fa-eye"></i> Details
+                </button>
+                ${appt.status === 'scheduled' ? `
+                    <a href="/appointment/${appt._id}/reschedule" class="btn btn-sm btn-warning">
+                        <i class="fas fa-clock"></i> Reschedule
+                    </a>
+                    <button onclick="cancelAppointment('${appt._id}')" class="btn btn-sm btn-danger">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function viewAppointmentDetails(appointment) {
+    document.getElementById('modal-id').textContent = appointment._id;
+    document.getElementById('modal-date').textContent = appointment.date;
+    document.getElementById('modal-time').textContent = appointment.time_slot;
+    document.getElementById('modal-dept').textContent = appointment.department;
+    document.getElementById('modal-doctor').textContent = 'Dr. ' + appointment.doctor_name;
+    document.getElementById('modal-status').textContent = appointment.status;
+    document.getElementById('modal-priority').textContent = appointment.priority || 'Normal';
+    document.getElementById('modal-reason').textContent = appointment.reason;
+    document.getElementById('modal-created').textContent = appointment.created_at || 'N/A';
+    document.getElementById('modal-start').textContent = appointment.actual_start_time || 'Not started';
+    document.getElementById('modal-end').textContent = appointment.actual_end_time || 'Not completed';
+    document.getElementById('modal-wait').textContent = 
+        appointment.estimated_wait_time ? 
+        `${appointment.estimated_wait_time} minutes` : 
+        (appointment.queue_info ? `${appointment.queue_info.wait_time} minutes` : 'N/A');
+
+    new bootstrap.Modal(document.getElementById('appointmentModal')).show();
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'scheduled': 'primary',
+        'checked-in': 'warning',
+        'in-progress': 'info',
+        'completed': 'success',
+        'cancelled': 'danger'
+    };
+    return colors[status] || 'secondary';
+}
+
+function cancelAppointment(appointmentId) {
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+        fetch(`/patient/cancel_appointment/${appointmentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to cancel appointment');
+            window.location.reload();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to cancel appointment');
+        });
+    }
+}
+
+// Initial load
+updateAppointments();
+// Refresh every 30 seconds
+setInterval(updateAppointments, 30000);
+</script>
 {% endblock %}

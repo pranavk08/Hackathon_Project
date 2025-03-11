@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Reschedule Appointment - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Reschedule Appointment</h2>
+        </div>
+        <div class="card-body">
+            <!-- Current Appointment Details -->
+            <div class="mb-4">
+                <h3 class="h6 text-muted mb-3">Current Appointment Details</h3>
+                <dl class="row">
+                    <dt class="col-sm-3">Current Date</dt>
+                    <dd class="col-sm-9">{{ appointment.date }}</dd>
+                    
+                    <dt class="col-sm-3">Current Time</dt>
+                    <dd class="col-sm-9">{{ appointment.time_slot }}</dd>
+                    
+                    <dt class="col-sm-3">Department</dt>
+                    <dd class="col-sm-9">{{ appointment.department }}</dd>
+                    
+                    <dt class="col-sm-3">Reason</dt>
+                    <dd class="col-sm-9">{{ appointment.reason or 'Not specified' }}</dd>
+                </dl>
+            </div>
+            
+            <hr class="my-4">
+            
+            <!-- Reschedule Form -->
+            <form method="POST" id="rescheduleForm">
+                <div class="mb-3">
+                    <label for="date" class="form-label">New Date</label>
+                    <input type="date" class="form-control" id="date" name="date" 
+                           min="{{ current_date }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time_slot" class="form-label">New Time</label>
+                    <select class="form-control" id="time_slot" name="time_slot" required>
+                        <option value="">Select time slot</option>
+                        <option value="09:00-09:30">09:00 AM - 09:30 AM</option>
+                        <option value="09:30-10:00">09:30 AM - 10:00 AM</option>
+                        <option value="10:00-10:30">10:00 AM - 10:30 AM</option>
+                        <option value="10:30-11:00">10:30 AM - 11:00 AM</option>
+                        <option value="11:00-11:30">11:00 AM - 11:30 AM</option>
+                        <option value="11:30-12:00">11:30 AM - 12:00 PM</option>
+                        <option value="14:00-14:30">02:00 PM - 02:30 PM</option>
+                        <option value="14:30-15:00">02:30 PM - 03:00 PM</option>
+                        <option value="15:00-15:30">03:00 PM - 03:30 PM</option>
+                        <option value="15:30-16:00">03:30 PM - 04:00 PM</option>
+                        <option value="16:00-16:30">04:00 PM - 04:30 PM</option>
+                        <option value="16:30-17:00">04:30 PM - 05:00 PM</option>
+                    </select>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Reschedule</button>
+                    <a href="{{ url_for('doctor_dashboard' if current_user.role == 'doctor' else 'patient_dashboard') }}" 
+                       class="btn btn-secondary ms-2">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set min date to today
+    const dateInput = document.getElementById('date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+    
+    // Pre-select the current time slot
+    const timeSelect = document.getElementById('time_slot');
+    const currentTimeSlot = "{{ appointment.time_slot }}";
+    if (currentTimeSlot) {
+        Array.from(timeSelect.options).forEach(option => {
+            if (option.value === currentTimeSlot) {
+                option.selected = true;
+            }
+        });
+    }
+    
+    // Form validation
+    const form = document.getElementById('rescheduleForm');
+    form.addEventListener('submit', function(e) {
+        const selectedDate = dateInput.value;
+        const selectedTime = timeSelect.value;
+        
+        if (!selectedDate || !selectedTime) {
+            e.preventDefault();
+            alert('Please select both date and time');
+            return;
+        }
+        
+        // If selected date is today, check if the time slot hasn't passed
+        if (selectedDate === today) {
+            const now = new Date();
+            const [startTime] = selectedTime.split('-');
+            const [hours, minutes] = startTime.split(':');
+            const selectedDateTime = new Date();
+            selectedDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
+            
+            if (selectedDateTime < now) {
+                e.preventDefault();
+                alert('Please select a future time slot for today');
+                return;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

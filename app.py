@@ -5,12 +5,24 @@ from models import users
 from models.user import User
 from models.appointment import Appointment
 from models.queue import QueueManager
-from bson.objectid import ObjectId
+from bson import ObjectId
+from datetime import datetime
+from flask import jsonify
+from flask_login import current_user, login_required
+
+# Make sure your MongoDB connection is properly initialized
+# Add this near the top of your app.py
+from pymongo import MongoClient
+
+# MongoDB connection
+client = MongoClient('mongodb://localhost:27017/')
+db = client['healthcare_queue']
 from datetime import datetime, timedelta
 from flask_mail import Mail, Message
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
 import os
+from flask import make_response
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -151,38 +163,47 @@ def patient_dashboard():
     if current_user.role != 'patient':
         flash('Unauthorized access', 'error')
         return redirect(url_for('index'))
-    
-    # Get upcoming appointments (scheduled and checked-in)
-    upcoming = Appointment.get_by_patient(
-        current_user.id, 
-        status=['scheduled', 'checked-in']
-    )
-    
-    # Sort upcoming appointments by date and time
-    upcoming.sort(key=lambda x: (x['date'], x['time_slot']))
-    
-    # Get past appointments (completed)
-    past_appointments = Appointment.get_by_patient(
-        current_user.id, 
-        status='completed'
-    )
-    
-    # Get queue status for upcoming appointments
-    queue_status = {}
-    for appt in upcoming:
-        if appt['status'] == 'checked-in':
-            dept_status = QueueManager.get_department_status(appt['department'])
-            if dept_status:
-                queue_status[str(appt['_id'])] = {
-                    'position': dept_status['checked_in_count'],
-                    'wait_time': dept_status['estimated_wait']
-                }
-    
-    return render_template(
-        'patient/dashboard.html', 
-        upcoming_appointments=upcoming,
-        queue_status=queue_status
-    )
+
+    try:
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Get upcoming appointments (scheduled and checked-in)
+        upcoming = Appointment.get_by_patient(
+            current_user.id,
+            status=['scheduled', 'checked-in']
+        )
+        
+        # Separate today's appointments from future appointments
+        todays_appointments = [appt for appt in upcoming if appt['date'] == today]
+        future_appointments = [appt for appt in upcoming if appt['date'] > today]
+        
+        # Get queue status for checked-in appointments
+        for appt in todays_appointments:
+            if appt['status'] == 'checked-in':
+                dept_status = QueueManager.get_department_status(appt['department'])
+                if dept_status:
+                    appt['queue_info'] = {
+                        'position': dept_status['checked_in_count'],
+                        'wait_time': appt['estimated_wait_time'] or dept_status['estimated_wait']
+                    }
+        
+        # Get past appointments
+        past_appointments = Appointment.get_by_patient(
+            current_user.id,
+            status='completed'
+        )
+
+        return render_template(
+            'patient/dashboard.html',
+            today_appointments=todays_appointments,
+            upcoming_appointments=future_appointments,
+            past_appointments=past_appointments
+        )
+        
+    except Exception as e:
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/patient/book_appointment')
 @login_required
@@ -257,7 +278,7 @@ def view_appointment(appointment_id):
         if dept_status:
             queue_info = {
                 'position': dept_status['checked_in_count'],
-                'wait_time': dept_status['estimated_wait']
+                'wait_time': appointment['estimated_wait_time'] or dept_status['estimated_wait']
             }
     
     return render_template(
@@ -315,62 +336,184 @@ def cancel_appointment(appointment_id):
     return redirect(url_for('patient_dashboard'))
 
 # Doctor routes
+# Add this new API endpoint for doctor appointments
+@app.route('/api/patient/appointments')
+@login_required
+def get_patient_appointments():
+    if current_user.role != 'patient':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Get all non-completed appointments
+        appointments = Appointment.get_by_patient(
+            current_user.id,
+            status=['scheduled', 'checked-in', 'in-progress']
+        )
+        
+        # Separate today's and upcoming appointments
+        today_appts = []
+        upcoming_appts = []
+        
+        for appt in appointments:
+            # Add queue information for checked-in appointments
+            if appt['status'] == 'checked-in':
+                dept_status = QueueManager.get_department_status(appt['department'])
+                if dept_status:
+                    appt['queue_info'] = {
+                        'position': dept_status['checked_in_count'],
+                        'wait_time': appt['estimated_wait_time'] or dept_status['estimated_wait']
+                    }
+            
+            # Separate appointments by date
+            if appt['date'] == today:
+                today_appts.append(appt)
+            elif appt['date'] > today:
+                upcoming_appts.append(appt)
+        
+        return jsonify({
+            'today': today_appts,
+            'upcoming': upcoming_appts,
+            'success': True
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'success': False
+        }), 500
+
+@app.route('/api/doctor/appointments')
+@login_required
+def get_doctor_appointments():
+    if current_user.role != 'doctor':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Get all appointments for today
+        todays_appointments = Appointment.get_by_doctor(
+            current_user.id,
+            date=today,
+            status=['scheduled', 'checked-in', 'in-progress', 'completed']
+        )
+        
+        # Get upcoming appointments
+        upcoming_appointments = Appointment.get_by_doctor(
+            current_user.id,
+            status=['scheduled'],
+            future_only=True
+        )
+        # Filter out today's appointments from upcoming
+        upcoming_appointments = [appt for appt in upcoming_appointments if appt['date'] > today]
+        
+        # Get department queue status
+        doctor = db.users.find_one({'_id': ObjectId(current_user.id)})
+        department = doctor.get('department', 'General')
+        dept_status = QueueManager.get_department_status(department)
+        
+        # Update queue information for checked-in appointments
+        for appt in todays_appointments:
+            if appt['status'] == 'checked-in' and dept_status:
+                appt['queue_info'] = {
+                    'position': dept_status['checked_in_count'],
+                    'wait_time': appt['estimated_wait_time'] or dept_status['estimated_wait']
+                }
+        
+        # Calculate queue metrics
+        queue_metrics = {
+            'waiting': len([a for a in todays_appointments if a['status'] == 'checked-in']),
+            'completed': len([a for a in todays_appointments if a['status'] == 'completed']),
+            'scheduled': len([a for a in todays_appointments if a['status'] == 'scheduled']),
+            'in_progress': len([a for a in todays_appointments if a['status'] == 'in-progress'])
+        }
+        
+        return jsonify({
+            'today': todays_appointments,
+            'upcoming': upcoming_appointments,
+            'queue_metrics': queue_metrics,
+            'department': department,
+            'success': True
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'success': False
+        }), 500
+
 @app.route('/doctor/dashboard')
 @login_required
 def doctor_dashboard():
     if current_user.role != 'doctor':
         flash('Unauthorized access', 'error')
         return redirect(url_for('index'))
-    
-    # Get today's date
-    today = datetime.utcnow().strftime('%Y-%m-%d')
-    
-    # Get today's appointments
-    todays_appointments = Appointment.get_by_doctor(current_user.id, date=today)
-    
-    # Get checked-in patients
-    checked_in = [a for a in todays_appointments if a['status'] == 'checked-in']
-    
-    # Get upcoming appointments (future dates)
-    upcoming = Appointment.get_by_doctor(
-        current_user.id, 
-        status='scheduled',
-        future_only=True  # Use the new future_only argument
-    )
-    
-    return render_template(
-        'doctor/dashboard.html',
-        todays_appointments=todays_appointments,
-        checked_in=checked_in,
-        upcoming=upcoming
-    )
-# def doctor_dashboard():
-#     if current_user.role != 'doctor':
-#         flash('Unauthorized access', 'error')
-#         return redirect(url_for('index'))
-    
-#     # Get today's date
-#     today = datetime.utcnow().strftime('%Y-%m-%d')
-    
-#     # Get today's appointments
-#     todays_appointments = Appointment.get_by_doctor(current_user.id, date=today)
-    
-#     # Get checked-in patients
-#     checked_in = [a for a in todays_appointments if a['status'] == 'checked-in']
-    
-#     # Get upcoming appointments (future dates)
-#     upcoming = Appointment.get_by_doctor(
-#         current_user.id, 
-#         status='scheduled',
-#         future_only=True
-#     )
-    
-#     return render_template(
-#         'doctor/dashboard.html',
-#         todays_appointments=todays_appointments,
-#         checked_in=checked_in,
-#         upcoming=upcoming
-#     )
+        
+    try:
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Get today's appointments
+        todays_appointments = Appointment.get_by_doctor(
+            current_user.id,
+            date=today,
+            status=['scheduled', 'checked-in', 'in-progress']
+        )
+        
+        # Get upcoming appointments (excluding today)
+        upcoming_appointments = Appointment.get_by_doctor(
+            current_user.id,
+            status=['scheduled'],
+            future_only=True
+        )
+        # Filter out today's appointments from upcoming
+        upcoming_appointments = [appt for appt in upcoming_appointments if appt['date'] > today]
+        
+        # Get completed appointments for today
+        completed_today = Appointment.get_by_doctor(
+            current_user.id,
+            date=today,
+            status='completed'
+        )
+        
+        # Calculate queue metrics
+        queue_metrics = {
+            'waiting': len([a for a in todays_appointments if a['status'] == 'checked-in']),
+            'completed': len(completed_today),
+            'scheduled': len([a for a in todays_appointments if a['status'] == 'scheduled']),
+            'in_progress': len([a for a in todays_appointments if a['status'] == 'in-progress'])
+        }
+        
+        # Get department queue status
+        doctor = db.users.find_one({'_id': ObjectId(current_user.id)})
+        department = doctor.get('department', 'General')
+        dept_status = QueueManager.get_department_status(department)
+        
+        # Update wait times for checked-in appointments
+        for appt in todays_appointments:
+            if appt['status'] == 'checked-in' and dept_status:
+                appt['queue_info'] = {
+                    'position': dept_status['checked_in_count'],
+                    'wait_time': appt['estimated_wait_time'] or dept_status['estimated_wait']
+                }
+        
+        return render_template(
+            'doctor/dashboard.html',
+            today_appointments=todays_appointments,
+            upcoming_appointments=upcoming_appointments,
+            completed_today=completed_today,
+            queue_metrics=queue_metrics,
+            department=department,
+            current_date=today
+        )
+        
+    except Exception as e:
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/doctor/start_appointment/<appointment_id>', methods=['POST'])
 @login_required
@@ -471,6 +614,111 @@ def server_error(e):
 def shutdown_scheduler(exception=None):
     if scheduler.running:
         scheduler.shutdown()
+
+@app.route('/appointment/<appointment_id>/reschedule', methods=['GET', 'POST'])
+@login_required
+def appointment_reschedule(appointment_id):
+    try:
+        # Get the appointment
+        appointment = Appointment.get_by_id(appointment_id)
+        if not appointment:
+            flash('Appointment not found', 'error')
+            return redirect(url_for('index'))
+            
+        # Check authorization
+        if current_user.role == 'patient' and str(appointment['patient_id']) != str(current_user.id):
+            flash('Unauthorized access', 'error')
+            return redirect(url_for('index'))
+        elif current_user.role == 'doctor' and str(appointment['doctor_id']) != str(current_user.id):
+            flash('Unauthorized access', 'error')
+            return redirect(url_for('index'))
+            
+        if request.method == 'POST':
+            new_date = request.form.get('date')
+            new_time = request.form.get('time_slot')
+            
+            if not new_date or not new_time:
+                flash('Please select both date and time', 'error')
+                return redirect(url_for('appointment_reschedule', appointment_id=appointment_id))
+            
+            # Check if the selected time slot is available
+            if not Appointment.is_time_slot_available(
+                appointment['doctor_id'], 
+                new_date, 
+                new_time, 
+                exclude_appointment_id=appointment_id
+            ):
+                flash('This time slot is not available. Please select another time.', 'error')
+                return redirect(url_for('appointment_reschedule', appointment_id=appointment_id))
+                
+            # Update the appointment
+            update_data = {
+                'date': new_date,
+                'time_slot': new_time,
+                'status': 'scheduled'  # Reset status to scheduled
+            }
+            
+            try:
+                Appointment.update_appointment(appointment_id, update_data)
+                flash('Appointment rescheduled successfully', 'success')
+                if current_user.role == 'doctor':
+                    return redirect(url_for('doctor_dashboard'))
+                else:
+                    return redirect(url_for('patient_dashboard'))
+            except ValueError as e:
+                flash(str(e), 'error')
+                return redirect(url_for('appointment_reschedule', appointment_id=appointment_id))
+            except Exception as e:
+                flash('An unexpected error occurred. Please try again.', 'error')
+                return redirect(url_for('appointment_reschedule', appointment_id=appointment_id))
+        
+        # GET request - show reschedule form
+        return render_template(
+            'reschedule_appointment.html',
+            appointment=appointment,
+            current_date=datetime.now().strftime('%Y-%m-%d')
+        )
+    except Exception as e:
+        flash('An unexpected error occurred. Please try again.', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/api/check_time_slots', methods=['GET'])
+@login_required
+def check_time_slots():
+    try:
+        doctor_id = request.args.get('doctor_id')
+        date = request.args.get('date')
+        appointment_id = request.args.get('appointment_id')
+        
+        if not doctor_id or not date:
+            return jsonify({
+                'error': 'Missing required parameters',
+                'success': False
+            }), 400
+            
+        # Get all time slots
+        all_slots = [
+            "09:00-09:30", "09:30-10:00", "10:00-10:30", "10:30-11:00",
+            "11:00-11:30", "11:30-12:00", "14:00-14:30", "14:30-15:00",
+            "15:00-15:30", "15:30-16:00", "16:00-16:30", "16:30-17:00"
+        ]
+        
+        # Check availability for each slot
+        available_slots = []
+        for slot in all_slots:
+            if Appointment.is_time_slot_available(doctor_id, date, slot, appointment_id):
+                available_slots.append(slot)
+                
+        return jsonify({
+            'available_slots': available_slots,
+            'success': True
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'success': False
+        }), 500
 
 if __name__ == '__main__':
     if not os.path.exists('instance'):

@@ -37,18 +37,22 @@
                     </div>
                 </div>
 
+                <!-- Add this inside the action buttons div -->
+                <!-- Update the reschedule button -->
                 <div class="mt-4">
                     {% if appointment.status == 'scheduled' %}
+                        <a href="{{ url_for('appointment_reschedule', appointment_id=appointment._id) }}" 
+                           class="btn btn-warning me-2">Reschedule</a>
                         <button class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
                             Cancel Appointment
                         </button>
                         {% if can_check_in %}
-                            <form action="{{ url_for('check_in_appointment', appointment_id=appointment._id) }}" method="POST" class="d-inline">
+                            <form action="{{ url_for('check_in_appointment', appointment_id=appointment._id) }}" 
+                                  method="POST" class="d-inline">
                                 <button type="submit" class="btn btn-success">Check In</button>
                             </form>
                         {% endif %}
                     {% endif %}
-                    <a href="{{ url_for('patient_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
                 </div>
             {% else %}
                 <p class="text-muted">Appointment not found.</p>
@@ -81,4 +85,3 @@
 </div>
 {% endif %}
 {% endblock %}
-#hello
