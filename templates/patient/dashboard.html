@@ -4,6 +4,20 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- Add debug information -->
+    {% if debug %}
+    <div class="alert alert-info">
+        <pre>{{ upcoming_appointments|tojson }}</pre>
+    </div>
+    {% endif %}
+
+    <!-- Add auto-refresh every 30 seconds -->
+    <script>
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);  // Refresh every 30 seconds
+    </script>
+
     <h1 class="text-primary mb-4">Welcome, {{ current_user.name }}</h1>
 
     <!-- Upcoming Appointments -->
