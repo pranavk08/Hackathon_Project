@@ -215,7 +215,28 @@ def book_appointment_page():
     # Get all doctors
     doctors = User.get_doctors()
     
-    return render_template('patient/book_appointment.html', doctors=doctors)
+    # Get hospitals data and convert ObjectId to string
+    try:
+        hospitals = list(db.Hospitals.find())
+        # Convert ObjectId to string for JSON serialization
+        for hospital in hospitals:
+            hospital['_id'] = str(hospital['_id'])
+            for h in hospital.get('hospitals', []):
+                if '_id' in h:
+                    h['_id'] = str(h['_id'])
+                for dept in h.get('departments', []):
+                    if '_id' in dept:
+                        dept['_id'] = str(dept['_id'])
+                    for doc in dept.get('doctors', []):
+                        if '_id' in doc:
+                            doc['_id'] = str(doc['_id'])
+    except Exception as e:
+        hospitals = []
+        flash('Error loading hospitals data', 'error')
+    
+    return render_template('patient/book_appointment.html', 
+                         doctors=doctors,
+                         hospitals=hospitals)
 
 @app.route('/api/available_slots', methods=['GET'])
 @login_required
@@ -711,6 +732,57 @@ def check_time_slots():
                 
         return jsonify({
             'available_slots': available_slots,
+            'success': True
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'success': False
+        }), 500
+
+@app.route('/api/peak_hours')
+def get_peak_hours():
+    try:
+        # Get all appointments for the next 7 days
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=7)
+        
+        # Aggregate appointments by hour
+        pipeline = [
+            {
+                '$match': {
+                    'date': {
+                        '$gte': start_date.strftime('%Y-%m-%d'),
+                        '$lte': end_date.strftime('%Y-%m-%d')
+                    },
+                    'status': {'$in': ['scheduled', 'checked-in']}
+                }
+            },
+            {
+                '$group': {
+                    '_id': {'$substr': ['$time_slot', 0, 5]},  # Group by start time
+                    'count': {'$sum': 1}
+                }
+            },
+            {'$sort': {'_id': 1}}
+        ]
+        
+        peak_hours = list(db.appointments.aggregate(pipeline))
+        
+        # Categorize hours as high, medium, or low traffic
+        max_count = max([p['count'] for p in peak_hours]) if peak_hours else 0
+        
+        for hour in peak_hours:
+            if hour['count'] >= max_count * 0.7:
+                hour['traffic'] = 'high'
+            elif hour['count'] >= max_count * 0.3:
+                hour['traffic'] = 'medium'
+            else:
+                hour['traffic'] = 'low'
+        
+        return jsonify({
+            'peak_hours': peak_hours,
             'success': True
         })
         
