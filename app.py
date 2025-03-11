@@ -152,8 +152,20 @@ def patient_dashboard():
         flash('Unauthorized access', 'error')
         return redirect(url_for('index'))
     
-    # Get upcoming appointments
-    upcoming = Appointment.get_by_patient(current_user.id, status=['scheduled', 'checked-in'])
+    # Get upcoming appointments (scheduled and checked-in)
+    upcoming = Appointment.get_by_patient(
+        current_user.id, 
+        status=['scheduled', 'checked-in']
+    )
+    
+    # Sort upcoming appointments by date and time
+    upcoming.sort(key=lambda x: (x['date'], x['time_slot']))
+    
+    # Get past appointments (completed)
+    past_appointments = Appointment.get_by_patient(
+        current_user.id, 
+        status='completed'
+    )
     
     # Get queue status for upcoming appointments
     queue_status = {}
@@ -208,17 +220,21 @@ def book_appointment():
     time_slot = request.form.get('time_slot')
     reason = request.form.get('reason')
     
-    # Create appointment
-    appointment_id = Appointment.create(
-        current_user.id,
-        doctor_id,
-        date,
-        time_slot,
-        reason
-    )
-    
-    flash('Appointment booked successfully', 'success')
-    return redirect(url_for('patient_dashboard'))
+    try:
+        result = Appointment.create(
+            current_user.id,
+            doctor_id,
+            date,
+            time_slot,
+            reason
+        )
+        
+        flash('Appointment booked successfully', 'success')
+        return redirect(url_for('view_appointment', appointment_id=result['appointment_id']))
+        
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('book_appointment_page'))
 
 @app.route('/patient/appointment/<appointment_id>')
 @login_required

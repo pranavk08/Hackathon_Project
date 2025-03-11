@@ -14,7 +14,31 @@ class Appointment:
             
         # Get doctor info for department
         doctor = users.find_one({'_id': doctor_id})
+        if not doctor:
+            raise ValueError("Doctor not found")
+            
+        # Check if the time slot is already taken for this doctor
+        existing_appointment = appointments.find_one({
+            'doctor_id': doctor_id,
+            'date': date,
+            'time_slot': time_slot,
+            'status': {'$ne': 'cancelled'}
+        })
         
+        if existing_appointment:
+            raise ValueError("This time slot is already booked for the selected doctor")
+        
+        # Check if patient already has an appointment at this time
+        patient_appointment = appointments.find_one({
+            'patient_id': patient_id,
+            'date': date,
+            'time_slot': time_slot,
+            'status': {'$ne': 'cancelled'}
+        })
+        
+        if patient_appointment:
+            raise ValueError("You already have an appointment scheduled at this time")
+            
         appointment = {
             'patient_id': patient_id,
             'doctor_id': doctor_id,
@@ -30,8 +54,15 @@ class Appointment:
             'actual_end_time': None
         }
         
-        result = appointments.insert_one(appointment)
-        return result.inserted_id
+        try:
+            result = appointments.insert_one(appointment)
+            # Return both the appointment ID and the created appointment data
+            return {
+                'appointment_id': result.inserted_id,
+                'appointment': appointment
+            }
+        except Exception as e:
+            raise ValueError("Failed to create appointment. Please try again.")
     
     @staticmethod
     def get_by_patient(patient_id, status=None):
@@ -159,3 +190,35 @@ class Appointment:
         
         # Return available slots
         return [slot for slot in all_slots if slot not in booked_slots]
+    
+    @staticmethod
+    def get_by_id(appointment_id):
+        """Get appointment by ID."""
+        if isinstance(appointment_id, str):
+            appointment_id = ObjectId(appointment_id)
+            
+        # Join with doctor information
+        pipeline = [
+            {'$match': {'_id': appointment_id}},
+            {'$lookup': {
+                'from': 'users',
+                'localField': 'doctor_id',
+                'foreignField': '_id',
+                'as': 'doctor'
+            }},
+            {'$unwind': '$doctor'},
+            {'$lookup': {
+                'from': 'users',
+                'localField': 'patient_id',
+                'foreignField': '_id',
+                'as': 'patient'
+            }},
+            {'$unwind': '$patient'},
+            {'$project': {
+                'doctor_password': 0,
+                'patient_password': 0
+            }}
+        ]
+        
+        result = list(appointments.aggregate(pipeline))
+        return result[0] if result else None
