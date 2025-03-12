@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Book Appointment - HealthQueue{% endblock %}
+{% block title %}Book Appointment - Hospital Management{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -11,16 +11,18 @@
         <h3 class="mb-4">Select Hospital</h3>
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {% for hospital in hospitals %}
-                {% for h in hospital.hospitals %}
-                    <div class="col">
-                        <div class="card h-100 hospital-card" onclick="showDepartments('{{ h.hospital_id }}')">
-                            <div class="card-body">
-                                <h5 class="card-title">{{ h.hospital_name }}</h5>
-                                <p class="card-text"><i class="fas fa-map-marker-alt"></i> {{ h.location }}</p>
-                            </div>
-                        </div>
+            <div class="col">
+                <div class="card h-100 hospital-card" onclick="showDepartments('{{ hospital.hospital_id }}')">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ hospital.hospital_name }}</h5>
+                        <p class="card-text"><i class="fas fa-map-marker-alt"></i> {{ hospital.location }}</p>
+                        <p class="card-text"><small class="text-muted">
+                            <i class="fas fa-phone"></i> {{ hospital.contact.phone }}<br>
+                            <i class="fas fa-envelope"></i> {{ hospital.contact.email }}
+                        </small></p>
                     </div>
-                {% endfor %}
+                </div>
+            </div>
             {% endfor %}
         </div>
     </div>
@@ -49,31 +51,22 @@
             <h2 class="h5 mb-0">Book Appointment</h2>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('book_appointment') }}">
+            <form id="bookingForm" method="POST" action="{{ url_for('book_appointment') }}" onsubmit="return validateForm()">
                 <input type="hidden" id="selected_doctor_id" name="doctor_id">
+                <input type="hidden" id="selected_slot_id" name="slot_id">
                 <div class="mb-3">
                     <label class="form-label">Selected Doctor</label>
                     <input type="text" class="form-control" id="doctor_name" readonly>
                 </div>
                 <div class="mb-3">
                     <label for="date" class="form-label">Select Date</label>
-                    <input type="date" class="form-control" id="date" name="date" required>
+                    <input type="date" class="form-control" id="date" name="date" required 
+                           min="{{ today }}" onchange="fetchAvailableSlots()">
                 </div>
                 <div class="mb-3">
                     <label for="time_slot" class="form-label">Select Time Slot</label>
-                    <select class="form-select" id="time_slot" name="time_slot" required>
+                    <select class="form-select" id="time_slot" required onchange="updateSelectedSlot()">
                         <option value="" disabled selected>Choose a time slot</option>
-                        <!-- Time slots remain the same -->
-                            <option value="09:00 AM">09:00 AM</option>
-                            <option value="10:00 AM">10:00 AM</option>
-                            <option value="11:00 AM">11:00 AM</option>
-                            <option value="12:00 PM">12:00 PM</option>
-                            <option value="01:00 PM">01:00 PM</option>
-                            <option value="02:00 PM">02:00 PM</option>
-                            <option value="03:00 PM">03:00 PM</option>
-                            <option value="04:00 PM">04:00 PM</option>
-                            <option value="05:00 PM">05:00 PM</option>
-                            <option value="06:00 PM">06:00 PM</option> 
                     </select>
                 </div>
                 <div class="mb-3">
@@ -87,9 +80,21 @@
 </div>
 
 <script>
-let hospitalData = {{ hospitals|tojson|safe }};
-let currentHospital = null;
-let currentDepartment = null;
+// Initialize variables
+var hospitalData = null;
+var currentHospital = null;
+var currentDepartment = null;
+var selectedDoctorId = null;
+
+// Set initial data from server
+(function initializeData() {
+    try {
+        hospitalData = JSON.parse('{{ hospitals|tojson|safe }}');
+    } catch (e) {
+        console.error('Error initializing hospital data:', e);
+        hospitalData = [];
+    }
+})();
 
 function showHospitals() {
     document.getElementById('hospitals-section').style.display = 'block';
@@ -99,18 +104,28 @@ function showHospitals() {
 }
 
 function showDepartments(hospitalId) {
-    currentHospital = hospitalData.find(h => h.hospitals.find(hosp => hosp.hospital_id == hospitalId))?.hospitals.find(h => h.hospital_id == hospitalId);
-    if (!currentHospital) return;
+    currentHospital = hospitalData.find(function(h) { 
+        return h.hospital_id === parseInt(hospitalId, 10); 
+    });
+    
+    if (!currentHospital) {
+        return;
+    }
 
-    const departmentsHtml = currentHospital.departments.map(dept => `
-        <div class="col">
-            <div class="card h-100 department-card" onclick="showDoctors('${dept.department_id}')">
-                <div class="card-body">
-                    <h5 class="card-title">${dept.department_name}</h5>
+    var departmentsHtml = currentHospital.departments.map(function(dept) {
+        return `
+            <div class="col">
+                <div class="card h-100 department-card" onclick="showDoctors('${dept.department_id}')">
+                    <div class="card-body">
+                        <h5 class="card-title">${dept.department_name}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">${dept.doctors.length} Doctor(s)</small>
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     document.getElementById('departments-list').innerHTML = departmentsHtml;
     document.getElementById('hospitals-section').style.display = 'none';
@@ -118,19 +133,32 @@ function showDepartments(hospitalId) {
 }
 
 function showDoctors(departmentId) {
-    currentDepartment = currentHospital.departments.find(d => d.department_id == parseInt(departmentId));
-    if (!currentDepartment) return;
+    currentDepartment = currentHospital.departments.find(function(d) {
+        return d.department_id === parseInt(departmentId, 10);
+    });
+    
+    if (!currentDepartment) {
+        return;
+    }
 
-    const doctorsHtml = currentDepartment.doctors.map(doctor => `
-        <div class="col">
-            <div class="card h-100 doctor-card" onclick="selectDoctor('${doctor.doctor_id}', '${doctor.doctor_name}')">
-                <div class="card-body">
-                    <h5 class="card-title">${doctor.doctor_name}</h5>
-                    ${doctor.available_slots ? '<span class="badge bg-success">Available</span>' : ''}
+    var doctorsHtml = currentDepartment.doctors.map(function(doctor) {
+        return `
+            <div class="col">
+                <div class="card h-100 doctor-card" onclick="selectDoctor(${doctor.doctor_id}, '${doctor.doctor_name}')">
+                    <div class="card-body">
+                        <h5 class="card-title">${doctor.doctor_name}</h5>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                ${doctor.specialization}<br>
+                                Experience: ${doctor.experience}<br>
+                                ${doctor.qualification}
+                            </small>
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 
     document.getElementById('doctors-list').innerHTML = doctorsHtml;
     document.getElementById('departments-section').style.display = 'none';
@@ -138,10 +166,72 @@ function showDoctors(departmentId) {
 }
 
 function selectDoctor(doctorId, doctorName) {
+    selectedDoctorId = doctorId;
     document.getElementById('selected_doctor_id').value = doctorId;
     document.getElementById('doctor_name').value = doctorName;
     document.getElementById('doctors-section').style.display = 'none';
     document.getElementById('appointment-form').style.display = 'block';
+    
+    // Reset date and time slot
+    document.getElementById('date').value = '';
+    document.getElementById('time_slot').innerHTML = '<option value="" disabled selected>Choose a time slot</option>';
+}
+
+function updateSelectedSlot() {
+    var timeSlot = document.getElementById('time_slot');
+    if (timeSlot.value) {
+        document.getElementById('selected_slot_id').value = timeSlot.value;
+    }
+}
+
+function validateForm() {
+    var doctorId = document.getElementById('selected_doctor_id').value;
+    var slotId = document.getElementById('selected_slot_id').value;
+    var date = document.getElementById('date').value;
+    var reason = document.getElementById('reason').value;
+    
+    if (!doctorId || !slotId || !date || !reason) {
+        alert('Please fill in all required fields');
+        return false;
+    }
+    return true;
+}
+
+function fetchAvailableSlots() {
+    var doctorId = document.getElementById('selected_doctor_id').value;
+    var date = document.getElementById('date').value;
+    
+    if (!doctorId || !date) {
+        return;
+    }
+
+    fetch('/api/available_slots?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(date))
+        .then(function(response) { 
+            return response.json(); 
+        })
+        .then(function(data) {
+            var timeSlotSelect = document.getElementById('time_slot');
+            timeSlotSelect.innerHTML = '<option value="" disabled selected>Choose a time slot</option>';
+            
+            if (data.slots && data.slots.length > 0) {
+                data.slots.forEach(function(slot) {
+                    var option = document.createElement('option');
+                    option.value = slot.slot_id;
+                    option.textContent = slot.time;
+                    timeSlotSelect.appendChild(option);
+                });
+                document.getElementById('selected_slot_id').value = '';
+            } else {
+                timeSlotSelect.innerHTML = '<option value="" disabled selected>No available slots</option>';
+                document.getElementById('selected_slot_id').value = '';
+            }
+        })
+        .catch(function(error) {
+            console.error('Error fetching slots:', error);
+            document.getElementById('time_slot').innerHTML = 
+                '<option value="" disabled selected>Error loading time slots</option>';
+            document.getElementById('selected_slot_id').value = '';
+        });
 }
 </script>
 
@@ -157,12 +247,16 @@ function selectDoctor(doctorId, doctorName) {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+.card-body {
+    padding: 1.5rem;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.fas {
+    margin-right: 0.5rem;
 }
 </style>
-
-<!-- Peak hours section remains the same -->
 {% endblock %}
