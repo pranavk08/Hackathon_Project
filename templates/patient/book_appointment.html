@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Book Appointment - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-primary mb-4">Book an Appointment</h1>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Select Doctor and Time</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('book_appointment') }}">
+                <div class="mb-3">
+                    <label for="doctor" class="form-label">Select Doctor</label>
+                    <select class="form-select" id="doctor" name="doctor_id" required>
+                        <option value="" disabled selected>Choose a doctor</option>
+                        {% for doctor in doctors %}
+                            <option value="{{ doctor._id }}">Dr. {{ doctor.name }} ({{ doctor.specialization }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="date" class="form-label">Select Date</label>
+                    <input type="date" class="form-control" id="date" name="date" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time_slot" class="form-label">Select Time Slot</label>
+                    <select class="form-select" id="time_slot" name="time_slot" required>
+                        <option value="" disabled selected>Choose a time slot</option>
+                        <!-- Time slots will be populated dynamically via JavaScript -->
+                            <option value="09:00-09:30">09:00 AM - 09:30 AM</option>
+                            <option value="09:30-10:00">09:30 AM - 10:00 AM</option>
+                            <option value="10:00-10:30">10:00 AM - 10:30 AM</option>
+                            <option value="10:30-11:00">10:30 AM - 11:00 AM</option>
+                            <option value="11:00-11:30">11:00 AM - 11:30 AM</option>
+                            <option value="11:30-12:00">11:30 AM - 12:00 PM</option>
+                            <option value="12:00-12:30">12:00 PM - 12:30 PM</option>
+                            <option value="12:30-01:00">12:30 PM - 01:00 PM</option>
+                            <option value="01:00-01:30">01:00 PM - 01:30 PM</option>
+                            <option value="01:30-02:00">01:30 PM - 02:00 PM</option>
+                            <option value="02:00-02:30">02:00 PM - 02:30 PM</option>
+                            <option value="02:30-03:00">02:30 PM - 03:00 PM</option>
+                            <option value="03:00-03:30">03:00 PM - 03:30 PM</option>
+                            <option value="03:30-04:00">03:30 PM - 04:00 PM</option>
+                            <option value="04:00-04:30">04:00 PM - 04:30 PM</option>
+                            <option value="04:30-05:00">04:30 PM - 05:00 PM</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason for Appointment</label>
+                    <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Book Appointment</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

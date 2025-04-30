@@ -1,0 +1,148 @@
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --background-color: #f8f9fa;
+    --text-color: #2c3e50;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: white !important;
+    padding: 1rem 2rem;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: black !important;  
+}
+
+.navbar-nav .nav-link {
+    color: black !important;
+    font-weight: 500;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--secondary-color) !important;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    background-color: var(--primary-color) !important;
+    padding: 1rem 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    padding: 0.5rem 1.5rem;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.btn-sm {
+    padding: 0.25rem 1rem;
+}
+
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.badge.bg-success {
+    background-color: #2ecc71 !important;
+}
+
+.badge.bg-warning {
+    background-color: #f1c40f !important;
+    color: #2c3e50;
+}
+
+.table-responsive {
+    border-radius: 10px;
+    background-color: white;
+}
+
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+h1.mb-4 {
+    font-weight: 700;
+    font-size: 2.5rem;
+    margin-bottom: 2rem !important;
+}
+
+.container.mt-4 {
+    margin-top: 2rem !important;
+    padding: 0 2rem;
+}
+
+.text-muted {
+    color: #95a5a6 !important;
+    font-style: italic;
+    padding: 1rem 0;
+}
+
+@media (max-width: 768px) {
+    .container.mt-4 {
+        padding: 0 1rem;
+    }
+
+    h1.mb-4 {
+        font-size: 2rem;
+    }
+
+    .card-header {
+        padding: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+}

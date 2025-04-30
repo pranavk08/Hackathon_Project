@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Booking Confirmation - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">Appointment Booked Successfully!</h4>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h5 mb-0">Your Upcoming Appointments</h2>
+        </div>
+        <div class="card-body">
+            {% if upcoming_appointments %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Doctor</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appt in upcoming_appointments %}
+                                <tr>
+                                    <td>{{ appt.date }}</td>
+                                    <td>{{ appt.time_slot }}</td>
+                                    <td>Dr. {{ appt.doctor.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if appt.status == 'scheduled' else 'warning' }}">
+                                            {{ appt.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Queue Information -->
+    {% if queue_info %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h2 class="h5 mb-0">Queue Information</h2>
+        </div>
+        <div class="card-body">
+            <p>Current Position: {{ queue_info.position }}</p>
+            <p>Estimated Wait Time: {{ queue_info.wait_time }} minutes</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('patient_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

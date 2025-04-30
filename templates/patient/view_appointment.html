@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}View Appointment - HealthQueue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">Appointment Details</h2>
+        </div>
+        <div class="card-body">
+            {% if appointment %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <h3 class="h5 mb-3">Basic Information</h3>
+                        <p><strong>Date:</strong> {{ appointment.date }}</p>
+                        <p><strong>Time:</strong> {{ appointment.time_slot }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-{{ 'success' if appointment.status == 'scheduled' else 'warning' }}">
+                                {{ appointment.status }}
+                            </span>
+                        </p>
+                        <p><strong>Doctor:</strong> Dr. {{ appointment.doctor.name }}</p>
+                        <p><strong>Department:</strong> {{ appointment.department }}</p>
+                        {% if appointment.reason %}
+                            <p><strong>Reason:</strong> {{ appointment.reason }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h3 class="h5 mb-3">Queue Information</h3>
+                        {% if appointment.status == 'checked-in' %}
+                            <p><strong>Position in Queue:</strong> {{ queue_position if queue_position else 'N/A' }}</p>
+                            <p><strong>Estimated Wait Time:</strong> {{ appointment.estimated_wait_time if appointment.estimated_wait_time else 'Calculating...' }} minutes</p>
+                        {% elif appointment.status == 'scheduled' %}
+                            <p>Check-in will be available on the appointment date.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Add this inside the action buttons div -->
+                <!-- Update the reschedule button -->
+                <div class="mt-4">
+                    {% if appointment.status == 'scheduled' %}
+                        <a href="{{ url_for('appointment_reschedule', appointment_id=appointment._id) }}" 
+                           class="btn btn-warning me-2">Reschedule</a>
+                        <button class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            Cancel Appointment
+                        </button>
+                        {% if can_check_in %}
+                            <form action="{{ url_for('check_in_appointment', appointment_id=appointment._id) }}" 
+                                  method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-success">Check In</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="text-muted">Appointment not found.</p>
+                <a href="{{ url_for('patient_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+{% if appointment and appointment.status == 'scheduled' %}
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">Cancel Appointment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to cancel this appointment?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form action="{{ url_for('cancel_appointment', appointment_id=appointment._id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Cancel Appointment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
