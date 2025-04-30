@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{% endblock %} - E-Commerce</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Google Fonts - Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <nav>
+    <div class="container" style="display: flex; align-items: center; justify-content: space-between;">
+      <a href="#" style="text-decoration: none; color: #6366f1; font-weight: 700; font-size: 1.6rem; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-list-check"></i> Login System
+      </a>
+      <ul style="list-style: none; display: flex; gap: 24px; margin: 0; padding: 0; align-items: center;">
+        {% if g.user %}
+          <li><span><i class="fas fa-user"></i> {{ g.user['username'] }}</span></li>
+          <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Log Out</a></li>
+        {% else %}
+          <li><a href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
+          <li><a href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Log In</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% for message in get_flashed_messages() %}
+      <div class="flash">
+        <i class="fas fa-exclamation-circle"></i> {{ message }}
+      </div>
+    {% endfor %}
+    
+    <section class="content">
+      {% block header %}{% endblock %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</body>
+</html>
+
