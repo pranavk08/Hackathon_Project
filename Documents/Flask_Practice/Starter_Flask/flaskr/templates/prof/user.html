@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Hackathon Topic{% endblock %}
+
+{% block content %}
+<!-- <form method="POST" action="{{ url_for('profile.user') }}"> -->
+<!--     <label for="name">Name</label> -->
+<!--     <input type="text" name="name" >  -->
+<!---->
+<!--     <button type="submit">Register as Participant</button> -->
+<!-- </form> -->
+<!---->
+<!---->
+<div class="page-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1>Create Your Account</h1>
+                <p class="lead">Join our community and participate in exciting hackathons</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow">
+                    <div class="card-body p-5">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
+                        <ul class="nav nav-pills nav-justified mb-4" id="registerTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="participant-tab" data-bs-toggle="pill" data-bs-target="#participant" type="button" role="tab" aria-controls="participant" aria-selected="true">
+                                    <i class="fas fa-user me-2"></i>Participant
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="organizer-tab" data-bs-toggle="pill" data-bs-target="#organizer" type="button" role="tab" aria-controls="organizer" aria-selected="false">
+                                    <i class="fas fa-user-tie me-2"></i>Organizer
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="registerTabsContent">
+                            <!-- Participant Registration Form -->
+                            <div class="tab-pane fade show active" id="participant" role="tabpanel" aria-labelledby="participant-tab">
+                                <form method="POST" action="{{ url_for('profile.user') }}" enctype="multipart/form-data">
+                                    <input type="hidden" name="user_type" value="participant">
+                                    <div class="mb-4">
+                                        <label for="participant_name" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control" id="participant_name" name="name" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="participant_email" name="email" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="participant_password" name="password" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_skills" class="form-label">Skills (comma-separated)</label>
+                                        <input type="text" class="form-control" id="participant_skills" name="skills" placeholder="e.g., Python, Web Development, ML">
+                                        <div class="form-text text-muted">
+                                            List your skills separated by commas
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_github" class="form-label">GitHub Profile (optional)</label>
+                                        <input type="url" class="form-control" id="participant_github" name="github" placeholder="https://github.com/yourusername">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_linkedin" class="form-label">LinkedIn Profile (optional)</label>
+                                        <input type="url" class="form-control" id="participant_linkedin" name="linkedin" placeholder="https://linkedin.com/in/yourusername">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="participant_profile_pic" class="form-label">Profile Picture (optional)</label>
+                                        <input type="file" class="form-control" id="participant_profile_pic" name="profile_pic" accept="image/*">
+                                        <div class="form-text text-muted">
+                                            Maximum file size: 2MB. Allowed formats: JPG, PNG, GIF
+                                        </div>
+                                    </div>
+                                    <!-- <div class="mb-4">
+                                        <label for="participant_profile_pic" class="form-label">Profile Picture (optional)</label>
+                                        <input type="file" class="form-control" id="participant_profile_pic" name="profile_pic" accept="image/*">
+                                        <div class="form-text text-muted">
+                                            Maximum file size: 2MB. Allowed formats: JPG, PNG, GIF
+                                        </div>
+                                    </div> -->
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-primary btn-lg">Register as Participant</button>
+                                    </div>
+                                </form>
+                                <div class="text-center mt-4">
+                                    <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
+                                </div>
+                            </div>
+                            
+                            <!-- Organizer Registration Form -->
+                            <div class="tab-pane fade" id="organizer" role="tabpanel" aria-labelledby="organizer-tab">
+                                <form method="POST" action="{{ url_for('profile.user') }}" enctype="multipart/form-data">
+                                    <input type="hidden" name="user_type" value="organizer">
+                                    <div class="mb-4">
+                                        <label for="organizer_name" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control" id="organizer_name" name="name" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="organizer_email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="organizer_email" name="email" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="organizer_password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="organizer_password" name="password" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="organization" class="form-label">Organization Name</label>
+                                        <input type="text" class="form-control" id="organization" name="organization" required 
+                                            placeholder="e.g., Tech Company, University, etc.">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="organizer_bio" class="form-label">Organization Bio</label>
+                                        <textarea class="form-control" id="organizer_bio" name="bio" rows="3" required 
+                                            placeholder="Brief description of your organization"></textarea>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="organizer_profile_pic" class="form-label">Profile Picture (optional)</label>
+                                        <input type="file" class="form-control" id="organizer_profile_pic" name="profile_pic" accept="image/*">
+                                        <div class="form-text text-muted">
+                                            Maximum file size: 2MB. Allowed formats: JPG, PNG, GIF
+                                        </div>
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success btn-lg">Register as Organizer</button>
+                                    </div>
+                                </form>
+                                <div class="text-center mt-4">
+                                    <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

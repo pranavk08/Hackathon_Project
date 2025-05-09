@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="admin-breadcrumb">
+  <a href="{{ url_for('admin.index') }}" class="admin-breadcrumb-item">Dashboard</a>
+  <span class="admin-breadcrumb-separator">/</span>
+  <span class="admin-breadcrumb-item active">System Logs</span>
+</div>
+
+<h1 class="admin-page-title">System Logs</h1>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <h5 class="admin-card-title">Admin Activity Logs</h5>
+  </div>
+  <div class="admin-card-body p-0">
+    {% if logs %}
+      <div class="admin-logs">
+        {% for log in logs %}
+          <div class="admin-log-entry">
+            <div class="admin-log-timestamp">{{ log.timestamp }}</div>
+            
+            {% if 'SUCCESS' in log.event_type %}
+              <div class="admin-log-type admin-log-type-success">{{ log.event_type }}</div>
+            {% elif 'FAIL' in log.event_type or 'ERROR' in log.event_type %}
+              <div class="admin-log-type admin-log-type-error">{{ log.event_type }}</div>
+            {% elif 'WARNING' in log.event_type %}
+              <div class="admin-log-type admin-log-type-warning">{{ log.event_type }}</div>
+            {% else %}
+              <div class="admin-log-type admin-log-type-info">{{ log.event_type }}</div>
+            {% endif %}
+            
+            <div class="admin-log-message">{{ log.message }}</div>
+            
+            <div class="admin-log-details">
+              {% if log.user_email %}
+                <span><i class="fas fa-user me-1"></i> {{ log.user_email }}</span>
+              {% endif %}
+              
+              {% if log.ip %}
+                <span class="ms-2"><i class="fas fa-globe me-1"></i> {{ log.ip }}</span>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="p-5 text-center text-muted">
+        <i class="fas fa-clipboard-list mb-3" style="font-size: 3rem;"></i>
+        <h5>No Logs Found</h5>
+        <p>There are no system logs recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

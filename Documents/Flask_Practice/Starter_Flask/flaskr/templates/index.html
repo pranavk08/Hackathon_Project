@@ -1,0 +1,45 @@
+<!-- index.html -->
+{% extends 'base.html' %}
+
+{% block title %}Hackathon Topic{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero py-5 position-relative overflow-hidden">
+    <div class="hero-bg-gradient"></div>
+    <div class="hero-shapes"></div>
+    <div class="container position-relative py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-5 mb-lg-0">
+                <span class="badge bg-white text-primary px-3 py-2 mb-3 fw-bold shadow-sm">Hackathon Problem</span>
+                <h1 class="display-4 fw-bold mb-4 text-white">Where <span class="text-gradient">Innovation</span> Meets <span class="text-gradient">Collaboration</span></h1>
+                <p class="lead mb-4 text-white opacity-90">Hackathon topic slogan paste here</p>
+                <div class="d-flex flex-wrap gap-3 mt-5">
+                    <a href="{{ url_for('index') }}" class="btn btn-light btn-lg shadow-hover">
+                        <i class="fas fa-search me-2"></i>Home
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 position-relative">
+                <div class="hero-image-container">
+                    <img src="/static/img/hero-illustration.svg" alt="Hackathon Illustration" class="img-fluid hero-image" onerror="this.src='/api/placeholder/600/400'; this.onerror=null;">
+                    <div class="floating-code floating-card-1 shadow-lg">
+                        <i class="fas fa-code text-primary"></i>
+                        <span>Code</span>
+                    </div>
+                    <div class="floating-code floating-card-2 shadow-lg">
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        <span>Innovate</span>
+                    </div>
+                    <div class="floating-code floating-card-3 shadow-lg">
+                        <i class="fas fa-users text-success"></i>
+                        <span>Collaborate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+

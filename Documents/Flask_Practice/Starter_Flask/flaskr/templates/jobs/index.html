@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}Job Listings - College Placement Portal{% endblock %}
+
+{% block extra_head %}
+<style>
+    .job-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .job-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .job-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    .company-name {
+        color: #3498db;
+        font-weight: 500;
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .badge-eligibility {
+        font-size: 0.8rem;
+    }
+    .job-location {
+        color: #7f8c8d;
+    }
+    .job-salary {
+        font-weight: 600;
+        color: #27ae60;
+    }
+    .job-deadline {
+        font-size: 0.85rem;
+        color: #e74c3c;
+    }
+    .job-card.not-eligible {
+        opacity: 0.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fas fa-briefcase me-2"></i>Job Listings</h2>
+            <p class="text-muted">Explore available job opportunities and find your perfect match</p>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4">
+        <form method="get" action="{{ url_for('jobs.index') }}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="role" class="form-label">Job Role</label>
+                    <input type="text" class="form-control" id="role" name="role" placeholder="e.g. Software Engineer" value="{{ request.args.get('role', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="company" class="form-label">Company</label>
+                    <select class="form-select" id="company" name="company">
+                        <option value="">All Companies</option>
+                        {% for company in companies %}
+                            <option value="{{ company.company_name }}" {% if request.args.get('company') == company.company_name %}selected{% endif %}>
+                                {{ company.company_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="location" class="form-label">Location</label>
+                    <input type="text" class="form-control" id="location" name="location" placeholder="e.g. Bangalore" value="{{ request.args.get('location', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="min_salary" class="form-label">Min. Salary (LPA)</label>
+                    <input type="number" class="form-control" id="min_salary" name="min_salary" placeholder="e.g. 5" value="{{ request.args.get('min_salary', '') }}">
+                </div>
+                <div class="col-md-12 text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i> Apply Filters
+                    </button>
+                    <a href="{{ url_for('jobs.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Clear Filters
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Job Listings -->
+    <div class="row">
+        {% if jobs %}
+            {% for job in jobs %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card job-card h-100 {% if job.is_eligible is defined and not job.is_eligible %}not-eligible{% endif %}">
+                        <div class="card-body">
+                            <h5 class="job-title">{{ job.title }}</h5>
+                            <h6 class="company-name">
+                                <i class="fas fa-building me-1"></i> {{ job.company_name }}
+                            </h6>
+                            <p class="job-location mb-2">
+                                <i class="fas fa-map-marker-alt me-1"></i> {{ job.location }}
+                            </p>
+                            {% if job.salary %}
+                                <p class="job-salary mb-2">
+                                    <i class="fas fa-rupee-sign me-1"></i> {{ job.salary }} LPA
+                                </p>
+                            {% endif %}
+                            <p class="job-deadline mb-3">
+                                <i class="fas fa-clock me-1"></i> Deadline: {{ job.application_deadline.strftime('%d %b %Y') }}
+                            </p>
+                            
+                            {% if g.user and g.user.role == 'student' %}
+                                {% if job.is_eligible is defined %}
+                                    {% if job.is_eligible %}
+                                        <span class="badge bg-success badge-eligibility mb-2">Eligible</span>
+                                    {% else %}
+                                        <span class="badge bg-danger badge-eligibility mb-2" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ job.eligibility_message }}">
+                                            Not Eligible
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if job.has_applied %}
+                                    <span class="badge bg-info badge-eligibility mb-2">
+                                        Applied - {{ job.application_status | capitalize }}
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="{{ url_for('jobs.view', job_id=job._id) }}" class="btn btn-outline-primary">
+                                    <i class="fas fa-info-circle me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No job listings found matching your criteria. Try adjusting your filters or check back later.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if g.user and g.user.role == 'recruiter' and g.user.verification_status == 'approved' %}
+        <div class="text-center mt-4">
+            <a href="{{ url_for('jobs.create') }}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-1"></i> Post New Job
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

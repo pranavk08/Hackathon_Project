@@ -1,0 +1,288 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="admin-breadcrumb">
+  <a href="{{ url_for('admin.index') }}" class="admin-breadcrumb-item">Dashboard</a>
+  <span class="admin-breadcrumb-separator">/</span>
+  <span class="admin-breadcrumb-item active">Users</span>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="admin-page-title mb-0">User Management</h1>
+</div>
+
+<div class="admin-card mb-4">
+  <div class="admin-card-header d-flex justify-content-between align-items-center">
+    <h5 class="admin-card-title mb-0">
+      <i class="fas fa-users me-2 text-primary"></i>All Users
+    </h5>
+    <div class="d-flex align-items-center">
+      <div class="position-relative me-3">
+        <input type="text" id="userSearchInput" class="form-control form-control-sm" placeholder="Search users..." style="min-width: 200px;">
+        <i class="fas fa-search position-absolute" style="right: 10px; top: 50%; transform: translateY(-50%); color: #adb5bd;"></i>
+      </div>
+      <select id="userStatusFilter" class="form-select form-select-sm" style="min-width: 120px;">
+        <option value="all">All Status</option>
+        <option value="active">Active</option>
+        <option value="inactive">Never Logged In</option>
+      </select>
+    </div>
+  </div>
+  <div class="admin-card-body p-0">
+    <div class="table-responsive">
+      <table class="admin-table" id="usersTable">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="username">
+              <div class="d-flex align-items-center">
+                <span>Username</span>
+                <i class="fas fa-sort ms-2 text-muted"></i>
+              </div>
+            </th>
+            <th class="sortable" data-sort="email">
+              <div class="d-flex align-items-center">
+                <span>Email</span>
+                <i class="fas fa-sort ms-2 text-muted"></i>
+              </div>
+            </th>
+            <th>Phone</th>
+            <th class="sortable" data-sort="status">
+              <div class="d-flex align-items-center">
+                <span>Status</span>
+                <i class="fas fa-sort ms-2 text-muted"></i>
+              </div>
+            </th>
+            <th class="sortable" data-sort="created">
+              <div class="d-flex align-items-center">
+                <span>Created</span>
+                <i class="fas fa-sort ms-2 text-muted"></i>
+              </div>
+            </th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr data-status="{% if user.last_login %}active{% else %}inactive{% endif %}">
+            <td>
+              <div>
+                <div class="fw-medium">{{ user.username }}</div>
+                {% if user.is_admin %}
+                <span class="admin-badge admin-badge-primary mt-1">Admin</span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <i class="fas fa-envelope text-muted me-2"></i>
+                <span>{{ user.email }}</span>
+              </div>
+            </td>
+            <td>
+              {% if user.phone %}
+                <div class="d-flex align-items-center">
+                  <i class="fas fa-phone text-muted me-2"></i>
+                  <span>{{ user.phone }}</span>
+                </div>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if user.last_login %}
+                <span class="admin-badge admin-badge-success d-flex align-items-center" style="width: fit-content">
+                  <i class="fas fa-circle me-1" style="font-size: 8px;"></i> Active
+                </span>
+              {% else %}
+                <span class="admin-badge admin-badge-warning d-flex align-items-center" style="width: fit-content">
+                  <i class="fas fa-circle me-1" style="font-size: 8px;"></i> Never Logged In
+                </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if user.created_at %}
+                <div class="d-flex align-items-center">
+                  <i class="far fa-calendar-alt text-muted me-2"></i>
+                  <span>{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+              {% else %}
+                <span class="text-muted">Unknown</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex justify-content-center">
+                <div class="dropdown">
+                  <button class="admin-btn admin-btn-sm admin-btn-outline dropdown-toggle" type="button" id="dropdownMenuButton{{ loop.index }}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-ellipsis-h"></i> Actions
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ loop.index }}">
+                    <li>
+                      <a class="dropdown-item" href="{{ url_for('admin.user_edit', id=user._id) }}">
+                        <i class="fas fa-edit text-primary me-2"></i> Edit User
+                      </a>
+                    </li>
+                    {% if not user.is_admin %}
+                    <li>
+                      <form action="{{ url_for('admin.make_admin', id=user._id) }}" method="post">
+                        <button type="submit" class="dropdown-item">
+                          <i class="fas fa-user-shield text-success me-2"></i> Make Admin
+                        </button>
+                      </form>
+                    </li>
+                    {% elif user._id|string != session.user_id %}
+                    <li>
+                      <form action="{{ url_for('admin.revoke_admin', id=user._id) }}" method="post">
+                        <button type="submit" class="dropdown-item">
+                          <i class="fas fa-user-times text-warning me-2"></i> Revoke Admin
+                        </button>
+                      </form>
+                    </li>
+                    {% endif %}
+                    {% if user._id|string != session.user_id %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <form action="{{ url_for('admin.user_delete', id=user._id) }}" method="post" 
+                            onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.')">
+                        <button type="submit" class="dropdown-item text-danger">
+                          <i class="fas fa-trash-alt me-2"></i> Delete User
+                        </button>
+                      </form>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="admin-card-footer d-flex justify-content-between align-items-center">
+    <div>
+      <span class="text-muted">Showing <span id="visibleUsers">{{ users|length }}</span> of {{ users|length }} users</span>
+    </div>
+    <div>
+      <nav aria-label="User pagination" class="d-flex justify-content-end">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+          </li>
+          <li class="page-item active"><a class="page-link" href="#">1</a></li>
+          <li class="page-item disabled">
+            <a class="page-link" href="#">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // User search functionality
+    const searchInput = document.getElementById('userSearchInput');
+    const statusFilter = document.getElementById('userStatusFilter');
+    const usersTable = document.getElementById('usersTable');
+    const tableRows = usersTable.querySelectorAll('tbody tr');
+    const visibleUsersCount = document.getElementById('visibleUsers');
+    
+    // Search and filter function
+    function filterUsers() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const statusValue = statusFilter.value;
+      let visibleCount = 0;
+      
+      tableRows.forEach(row => {
+        const username = row.querySelector('td:first-child').textContent.toLowerCase();
+        const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const rowStatus = row.getAttribute('data-status');
+        
+        const matchesSearch = username.includes(searchTerm) || email.includes(searchTerm);
+        const matchesStatus = statusValue === 'all' || rowStatus === statusValue;
+        
+        if (matchesSearch && matchesStatus) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      visibleUsersCount.textContent = visibleCount;
+    }
+    
+    // Add event listeners
+    searchInput.addEventListener('input', filterUsers);
+    statusFilter.addEventListener('change', filterUsers);
+    
+    // Sorting functionality
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    let currentSort = { column: null, direction: 'asc' };
+    
+    sortableHeaders.forEach(header => {
+      header.addEventListener('click', function() {
+        const column = this.getAttribute('data-sort');
+        const icon = this.querySelector('i');
+        
+        // Reset all icons
+        sortableHeaders.forEach(h => {
+          h.querySelector('i').className = 'fas fa-sort ms-2 text-muted';
+        });
+        
+        // Set direction
+        if (currentSort.column === column) {
+          currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort.column = column;
+          currentSort.direction = 'asc';
+        }
+        
+        // Update icon
+        icon.className = `fas fa-sort-${currentSort.direction === 'asc' ? 'up' : 'down'} ms-2 text-primary`;
+        
+        // Sort the table
+        sortTable(column, currentSort.direction);
+      });
+    });
+    
+    function sortTable(column, direction) {
+      const tbody = usersTable.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      // Sort based on column
+      rows.sort((a, b) => {
+        let valueA, valueB;
+        
+        if (column === 'username') {
+          valueA = a.querySelector('td:nth-child(1)').textContent.trim().toLowerCase();
+          valueB = b.querySelector('td:nth-child(1)').textContent.trim().toLowerCase();
+        } else if (column === 'email') {
+          valueA = a.querySelector('td:nth-child(2)').textContent.trim().toLowerCase();
+          valueB = b.querySelector('td:nth-child(2)').textContent.trim().toLowerCase();
+        } else if (column === 'status') {
+          valueA = a.getAttribute('data-status');
+          valueB = b.getAttribute('data-status');
+        } else if (column === 'created') {
+          valueA = a.querySelector('td:nth-child(5)').textContent.trim();
+          valueB = b.querySelector('td:nth-child(5)').textContent.trim();
+        }
+        
+        if (direction === 'asc') {
+          return valueA.localeCompare(valueB);
+        } else {
+          return valueB.localeCompare(valueA);
+        }
+      });
+      
+      // Reorder the table
+      rows.forEach(row => {
+        tbody.appendChild(row);
+      });
+    }
+  });
+</script>
+{% endblock %}

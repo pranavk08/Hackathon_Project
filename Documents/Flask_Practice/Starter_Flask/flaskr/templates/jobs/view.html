@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ job.title }} - College Placement Portal{% endblock %}
+
+{% block extra_head %}
+<style>
+    .job-header {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .job-title {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    .company-name {
+        color: #3498db;
+        font-weight: 500;
+    }
+    .job-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin: 15px 0;
+    }
+    .job-meta-item {
+        display: flex;
+        align-items: center;
+        color: #7f8c8d;
+    }
+    .job-meta-item i {
+        margin-right: 5px;
+        color: #3498db;
+    }
+    .job-description {
+        white-space: pre-line;
+        line-height: 1.6;
+    }
+    .job-eligibility {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    .application-form {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .application-status {
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    .application-status.pending {
+        background-color: #fff3cd;
+    }
+    .application-status.shortlisted {
+        background-color: #d1ecf1;
+    }
+    .application-status.rejected {
+        background-color: #f8d7da;
+    }
+    .application-status.hired {
+        background-color: #d4edda;
+    }
+    .stats-card {
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .stats-card .number {
+        font-size: 24px;
+        font-weight: 600;
+    }
+    .stats-card .label {
+        color: #7f8c8d;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('jobs.index') }}">Jobs</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ job.title }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Job Header -->
+    <div class="job-header">
+        <div class="row">
+            <div class="col-md-8">
+                <h2 class="job-title">{{ job.title }}</h2>
+                <h4 class="company-name">
+                    <i class="fas fa-building me-1"></i> {{ job.company_name }}
+                    {% if job.company_website %}
+                        <a href="{{ job.company_website }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                            <i class="fas fa-external-link-alt"></i> Visit Website
+                        </a>
+                    {% endif %}
+                </h4>
+                
+                <div class="job-meta">
+                    <div class="job-meta-item">
+                        <i class="fas fa-map-marker-alt"></i> {{ job.location }}
+                    </div>
+                    <div class="job-meta-item">
+                        <i class="fas fa-briefcase"></i> {{ job.role }}
+                    </div>
+                    {% if job.salary %}
+                        <div class="job-meta-item">
+                            <i class="fas fa-rupee-sign"></i> {{ job.salary }} LPA
+                        </div>
+                    {% endif %}
+                    <div class="job-meta-item">
+                        <i class="fas fa-clock"></i> Posted on {{ job.created_at.strftime('%d %b %Y') }}
+                    </div>
+                    <div class="job-meta-item">
+                        <i class="fas fa-calendar-times"></i> Deadline: {{ job.application_deadline.strftime('%d %b %Y') }}
+                    </div>
+                </div>
+                
+                {% if g.user and g.user.role == 'student' %}
+                    {% if is_eligible %}
+                        <span class="badge bg-success">Eligible</span>
+                    {% else %}
+                        <span class="badge bg-danger">Not Eligible</span>
+                        <p class="text-danger mt-2"><i class="fas fa-exclamation-circle me-1"></i> {{ eligibility_message }}</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+            
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                {% if g.user and g.user.role == 'student' %}
+                    {% if has_applied %}
+                        <div class="application-status {{ application_status }}">
+                            <h5><i class="fas fa-clipboard-check me-1"></i> Application Status</h5>
+                            <p class="mb-0">
+                                {% if application_status == 'pending' %}
+                                    <i class="fas fa-hourglass-half me-1"></i> Your application is being reviewed
+                                {% elif application_status == 'shortlisted' %}
+                                    <i class="fas fa-check-circle me-1"></i> You have been shortlisted
+                                {% elif application_status == 'rejected' %}
+                                    <i class="fas fa-times-circle me-1"></i> Your application was not selected
+                                {% elif application_status == 'hired' %}
+                                    <i class="fas fa-trophy me-1"></i> Congratulations! You've been hired
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% elif is_eligible %}
+                        <a href="#apply-section" class="btn btn-primary btn-lg">
+                            <i class="fas fa-paper-plane me-1"></i> Apply Now
+                        </a>
+                    {% endif %}
+                {% endif %}
+                
+                {% if g.user and g.user.role == 'recruiter' and job.company_id == g.user._id|string %}
+                    <a href="{{ url_for('jobs.edit', job_id=job._id) }}" class="btn btn-warning">
+                        <i class="fas fa-edit me-1"></i> Edit Job
+                    </a>
+                    <a href="{{ url_for('jobs.job_applications', job_id=job._id) }}" class="btn btn-info mt-2">
+                        <i class="fas fa-users me-1"></i> View Applications
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Job Details -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-align-left me-2"></i>Job Description</h5>
+                </div>
+                <div class="card-body">
+                    <div class="job-description">{{ job.description }}</div>
+                </div>
+            </div>
+            
+            <!-- Eligibility Criteria -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle me-2"></i>Eligibility Criteria</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% if job.min_cgpa %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Minimum CGPA Required
+                                <span class="badge bg-primary rounded-pill">{{ job.min_cgpa }}</span>
+                            </li>
+                        {% endif %}
+                        
+                        {% if job.eligible_branches %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    Eligible Branches
+                                </div>
+                                <div>
+                                    {% for branch in job.eligible_branches %}
+                                        <span class="badge bg-info me-1 mb-1">{{ branch }}</span>
+                                    {% endfor %}
+                                </div>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Application Form -->
+            {% if g.user and g.user.role == 'student' and is_eligible and not has_applied %}
+                <div class="card mb-4" id="apply-section">
+                    <div class="card-header">
+                        <h5><i class="fas fa-paper-plane me-2"></i>Apply for this Job</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('jobs.apply', job_id=job._id) }}">
+                            <div class="mb-3">
+                                <label for="cover_letter" class="form-label">Cover Letter / Why should you be hired?</label>
+                                <textarea class="form-control" id="cover_letter" name="cover_letter" rows="5" required></textarea>
+                                <div class="form-text">Explain why you're a good fit for this role and what makes you stand out.</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i> Submit Application
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Application Statistics for Recruiters -->
+            {% if application_stats %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Application Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="stats-card bg-light">
+                                    <div class="number">{{ application_stats.total }}</div>
+                                    <div class="label">Total Applications</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card bg-warning bg-opacity-25">
+                                    <div class="number">{{ application_stats.pending }}</div>
+                                    <div class="label">Pending</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card bg-info bg-opacity-25">
+                                    <div class="number">{{ application_stats.shortlisted }}</div>
+                                    <div class="label">Shortlisted</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card bg-success bg-opacity-25">
+                                    <div class="number">{{ application_stats.hired }}</div>
+                                    <div class="label">Hired</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid mt-3">
+                            <a href="{{ url_for('jobs.job_applications', job_id=job._id) }}" class="btn btn-outline-primary">
+                                <i class="fas fa-users me-1"></i> Manage Applications
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Company Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-building me-2"></i>About the Company</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ job.company_name }}</h6>
+                    {% if job.company_website %}
+                        <p><i class="fas fa-globe me-2"></i><a href="{{ job.company_website }}" target="_blank">{{ job.company_website }}</a></p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Similar Jobs -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-briefcase me-2"></i>Similar Jobs</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Coming soon...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

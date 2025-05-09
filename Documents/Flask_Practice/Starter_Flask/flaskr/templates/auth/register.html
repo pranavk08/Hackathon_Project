@@ -1,0 +1,724 @@
+{% extends "base.html" %}
+{% block content%}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <div class="icon-circle"></div>
+        <i class="fas fa-user-plus"></i>
+      </div>
+      <h1>Create Account</h1>
+    </div>
+    
+    <form method="post" class="auth-form">
+      <div class="form-group">
+        <label for="username"><i class="fas fa-user"></i> Username</label>
+        <div class="input-group">
+          <input class="form-control" name="username" id="username" placeholder="Choose a username" required autofocus value="{{ form_data.get('username', '') }}">
+          <span class="input-group-text"><i class="fas fa-user"></i></span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email"><i class="fas fa-envelope"></i> Email</label>
+        <div class="input-group">
+          <input class="form-control" type="email" name="email" id="email" placeholder="Enter your email address" required value="{{ form_data.get('email', '') }}">
+          <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="phone"><i class="fas fa-phone"></i> Phone Number</label>
+        <div class="input-group">
+          <span class="input-group-text">+91</span>
+          <input class="form-control" type="tel" name="phone" id="phone" placeholder="Enter your 10-digit phone number" required pattern="[0-9]{10}" maxlength="10" value="{{ form_data.get('phone', '') }}">
+          <span class="input-group-text"><i class="fas fa-phone"></i></span>
+        </div>
+        <small class="form-text text-muted">Please enter your 10-digit phone number without the country code</small>
+      </div>
+      
+      <div class="form-group">
+        <label for="password"><i class="fas fa-lock"></i> Password</label>
+        <div class="input-group">
+          <input class="form-control" type="password" name="password" id="password" placeholder="Create a strong password" required>
+          <span class="input-group-text toggle-password" onclick="togglePassword('password')">
+            <i class="fas fa-eye"></i>
+          </span>
+        </div>
+        <div class="password-strength-meter">
+          <div class="strength-bar"></div>
+        </div>
+        <div class="password-strength-text"></div>
+        <div class="password-requirements">
+          <ul>
+            <li id="length"><i class="fas fa-times"></i> At least 8 characters</li>
+            <li id="uppercase"><i class="fas fa-times"></i> One uppercase letter</li>
+            <li id="lowercase"><i class="fas fa-times"></i> One lowercase letter</li>
+            <li id="number"><i class="fas fa-times"></i> One number</li>
+            <li id="special"><i class="fas fa-times"></i> One special character</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm_password"><i class="fas fa-lock"></i> Confirm Password</label>
+        <div class="input-group">
+          <input class="form-control" type="password" name="confirm_password" id="confirm_password" placeholder="Confirm your password" required>
+          <span class="input-group-text toggle-password" onclick="togglePassword('confirm_password')">
+            <i class="fas fa-eye"></i>
+          </span>
+        </div>
+        <div id="password-match" class="password-match-text"></div>
+      </div>
+
+      <div class="password-security-info">
+        <button type="button" class="security-info-toggle" onclick="toggleSecurityInfo()">
+          <i class="fas fa-shield-alt"></i> Why Strong Passwords Matter
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </button>
+        <div class="security-info-content">
+          <div class="reason">
+            <p>Think of your password as the lock on your digital front door. Every additional requirement exponentially increases the number of possible combinations a hacker would need to try.</p>
+          </div>
+          
+          <div class="hacker-attempt">
+            <span class="pulse"></span> Attempt #1: "password" ❌<br>
+            <span class="pulse"></span> Attempt #2: "12345678" ❌<br>
+            <span class="pulse"></span> Attempt #3: "qwerty" ❌<br>
+            <span class="pulse"></span> ...<br>
+            <span class="pulse"></span> Attempt #9,726,354: "S3cur3P@ss" ✓<br>
+            <span class="pulse"></span> <span style="color: #ff5630;">ACCESS DENIED: Rate limited after multiple attempts</span>
+          </div>
+          
+          <div class="time-to-crack">
+            <div class="time-box">
+              <h3>Weak</h3>
+              <p>Seconds</p>
+            </div>
+            <div class="time-box">
+              <h3>Medium</h3>
+              <p>Days</p>
+            </div>
+            <div class="time-box">
+              <h3>Strong</h3>
+              <p>Centuries</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-block">
+        <i class="fas fa-user-plus"></i> Create Account
+      </button>
+    </form>
+    
+    <div class="auth-footer">
+      <p>Already have an account? <a href="{{ url_for('auth.login') }}">Log in here</a></p>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  transition: transform 0.3s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-5px);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.auth-icon {
+  width: 90px;
+  height: 92px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.auth-icon:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+}
+
+.auth-icon i {
+  font-size: 2.8rem;
+  color: white;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.auth-icon::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.auth-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0) 60%);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.auth-icon .icon-circle {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  z-index: 0;
+}
+
+.auth-icon .icon-circle::before {
+  content: '';
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  top: -10%;
+  left: -10%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 0;
+}
+
+.auth-header h1 {
+  color: #2d3748;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.8rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.input-group:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-group-text {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1rem;
+  color: #a0aec0;
+  transition: color 0.3s ease;
+}
+
+.input-group:focus-within .input-group-text {
+  color: #667eea;
+}
+
+.input-group .form-control {
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: #2d3748;
+  background: transparent;
+}
+
+.input-group .form-control:focus {
+  box-shadow: none;
+}
+
+.input-group .form-control::placeholder {
+  color: #a0aec0;
+}
+
+.toggle-password {
+  cursor: pointer;
+  color: #a0aec0;
+  transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+  color: #667eea;
+}
+
+.password-strength-meter {
+  height: 6px;
+  background-color: #edf2f7;
+  margin-top: 8px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.strength-bar {
+  height: 100%;
+  width: 0;
+  transition: all 0.3s ease;
+}
+
+.password-strength-text {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  font-weight: 500;
+}
+
+.password-match-text {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  text-align: right;
+  font-weight: 500;
+}
+
+.password-requirements {
+  margin-top: 12px;
+  background: #f7fafc;
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.password-requirements ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.password-requirements li {
+  font-size: 0.85rem;
+  color: #4a5568;
+  margin: 6px 0;
+  display: flex;
+  align-items: center;
+}
+
+.password-requirements li i {
+  margin-right: 8px;
+  width: 16px;
+  transition: color 0.3s ease;
+}
+
+.password-requirements li.valid {
+  color: #38a169;
+}
+
+.password-requirements li.valid i {
+  color: #38a169;
+}
+
+.weak {
+  background-color: #e53e3e;
+  width: 33%;
+}
+
+.medium {
+  background-color: #dd6b20;
+  width: 66%;
+}
+
+.strong {
+  background-color: #38a169;
+  width: 100%;
+}
+
+.btn-block {
+  width: 100%;
+  padding: 14px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
+}
+
+.btn-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  transition: all 0.3s ease;
+}
+
+.btn-block::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+  transition: all 0.3s ease;
+}
+
+.btn-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5a6fd1 0%, #6a3f9a 100%);
+}
+
+.btn-block:hover::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.btn-block:hover::after {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+}
+
+.btn-block:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #4d5db8 0%, #5d3488 100%);
+}
+
+.btn-block i {
+  margin-right: 8px;
+  font-size: 1.1em;
+  transition: transform 0.3s ease;
+}
+
+.btn-block:hover i {
+  transform: scale(1.1);
+}
+
+.btn-block:active i {
+  transform: scale(0.95);
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #edf2f7;
+}
+
+.auth-footer p {
+  color: #4a5568;
+  margin: 0;
+}
+
+.auth-footer a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.auth-footer a:hover {
+  color: #764ba2;
+  text-decoration: none;
+}
+
+/* Flash messages styling */
+.flash-messages {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.flash-message {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.password-security-info {
+  margin: 20px 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.security-info-toggle {
+  width: 100%;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.security-info-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.security-info-content {
+  display: none;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.security-info-content.active {
+  display: block;
+}
+
+.toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.toggle-icon.active {
+  transform: rotate(180deg);
+}
+
+.reason {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f0f3ff;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.hacker-attempt {
+  background-color: #292b36;
+  color: #48b2bf;
+  padding: 15px;
+  border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 20px;
+}
+
+.pulse {
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+  background-color: #ff5630;
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: pulse 1.5s infinite;
+}
+
+.time-to-crack {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.time-box {
+  flex-grow: 1;
+  padding: 12px;
+  text-align: center;
+  color: white;
+}
+
+.time-box:nth-child(1) {
+  background-color: #ff5630;
+}
+
+.time-box:nth-child(2) {
+  background-color: #ff9f1a;
+}
+
+.time-box:nth-child(3) {
+  background-color: #36b37e;
+}
+
+.time-box h3 {
+  margin: 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.8;
+}
+
+.time-box p {
+  margin: 5px 0 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 86, 48, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(255, 86, 48, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 86, 48, 0);
+  }
+}
+</style>
+
+<script>
+function togglePassword(inputId) {
+  const input = document.getElementById(inputId);
+  const icon = input.nextElementSibling.querySelector('i');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+
+document.getElementById('password').addEventListener('input', function(e) {
+    const password = e.target.value;
+    const strengthBar = document.querySelector('.strength-bar');
+    const strengthText = document.querySelector('.password-strength-text');
+    const confirmPassword = document.getElementById('confirm_password').value;
+    
+    // Reset classes
+    strengthBar.className = 'strength-bar';
+    
+    // Check requirements
+    const length = password.length >= 8;
+    const uppercase = /[A-Z]/.test(password);
+    const lowercase = /[a-z]/.test(password);
+    const number = /[0-9]/.test(password);
+    const special = /[^A-Za-z0-9]/.test(password);
+    
+    // Update requirement indicators
+    document.getElementById('length').className = length ? 'valid' : '';
+    document.getElementById('uppercase').className = uppercase ? 'valid' : '';
+    document.getElementById('lowercase').className = lowercase ? 'valid' : '';
+    document.getElementById('number').className = number ? 'valid' : '';
+    document.getElementById('special').className = special ? 'valid' : '';
+    
+    // Update icons
+    document.getElementById('length').querySelector('i').className = length ? 'fas fa-check' : 'fas fa-times';
+    document.getElementById('uppercase').querySelector('i').className = uppercase ? 'fas fa-check' : 'fas fa-times';
+    document.getElementById('lowercase').querySelector('i').className = lowercase ? 'fas fa-check' : 'fas fa-times';
+    document.getElementById('number').querySelector('i').className = number ? 'fas fa-check' : 'fas fa-times';
+    document.getElementById('special').querySelector('i').className = special ? 'fas fa-check' : 'fas fa-times';
+    
+    // Calculate strength score
+    let strength = 0;
+    if (length) strength += 1;
+    if (uppercase) strength += 1;
+    if (lowercase) strength += 1;
+    if (number) strength += 1;
+    if (special) strength += 1;
+    
+    // Update UI based on strength
+    if (password.length === 0) {
+        strengthBar.style.width = '0';
+        strengthText.textContent = '';
+    } else if (strength <= 2) {
+        strengthBar.className = 'strength-bar weak';
+        strengthText.textContent = 'Weak Password';
+        strengthText.style.color = '#ff4444';
+    } else if (strength <= 4) {
+        strengthBar.className = 'strength-bar medium';
+        strengthText.textContent = 'Medium Password';
+        strengthText.style.color = '#ffbb33';
+    } else {
+        strengthBar.className = 'strength-bar strong';
+        strengthText.textContent = 'Strong Password';
+        strengthText.style.color = '#00C851';
+    }
+
+    // Check password match
+    checkPasswordMatch(password, confirmPassword);
+});
+
+document.getElementById('confirm_password').addEventListener('input', function(e) {
+    const password = document.getElementById('password').value;
+    const confirmPassword = e.target.value;
+    checkPasswordMatch(password, confirmPassword);
+});
+
+function checkPasswordMatch(password, confirmPassword) {
+    const matchText = document.getElementById('password-match');
+    
+    if (confirmPassword.length === 0) {
+        matchText.textContent = '';
+    } else if (password === confirmPassword) {
+        matchText.textContent = 'Passwords match';
+        matchText.style.color = '#00C851';
+    } else {
+        matchText.textContent = 'Passwords do not match';
+        matchText.style.color = '#ff4444';
+    }
+}
+
+function toggleSecurityInfo() {
+  const content = document.querySelector('.security-info-content');
+  const icon = document.querySelector('.toggle-icon');
+  content.classList.toggle('active');
+  icon.classList.toggle('active');
+}
+</script>
+{% endblock %}

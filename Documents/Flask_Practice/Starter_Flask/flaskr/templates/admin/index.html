@@ -1,0 +1,316 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="admin-page-title mb-1">Admin Dashboard</h1>
+    <p class="text-muted">Welcome back, {{ g.user.get('username', 'Admin') }}! Here's what's happening with your site.</p>
+  </div>
+  <div>
+    <span class="badge bg-light text-dark p-2 d-flex align-items-center">
+      <i class="fas fa-calendar-alt me-2"></i> {{ now.strftime('%B %d, %Y') }}
+    </span>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+  <div class="col-md-4 mb-4">
+    <div class="admin-card h-100">
+      <div class="admin-stat">
+        <div class="admin-stat-icon" style="background: linear-gradient(135deg, var(--admin-primary-light) 0%, var(--admin-primary) 100%);">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="admin-stat-value">{{ total_users }}</div>
+        <div class="admin-stat-label">Total Users</div>
+        <div class="mt-3 text-center">
+          <span class="badge rounded-pill" style="background-color: var(--admin-primary-light); color: var(--admin-primary-dark); font-weight: 500;">
+            <i class="fas fa-chart-line me-1"></i> Active Platform
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 mb-4">
+    <div class="admin-card h-100">
+      <div class="admin-stat">
+        <div class="admin-stat-icon" style="background: linear-gradient(135deg, var(--admin-success-light) 0%, var(--admin-success) 100%);">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <div class="admin-stat-value">{{ recent_users }}</div>
+        <div class="admin-stat-label">New Users (7 days)</div>
+        <div class="mt-3 text-center">
+          <span class="badge rounded-pill" style="background-color: var(--admin-success-light); color: var(--admin-success-dark); font-weight: 500;">
+            <i class="fas fa-arrow-up me-1"></i> Growing
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 mb-4">
+    <div class="admin-card h-100">
+      <div class="admin-stat">
+        <div class="admin-stat-icon" style="background: linear-gradient(135deg, var(--admin-warning-light) 0%, var(--admin-warning) 100%);">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <div class="admin-stat-value">{{ admin_users }}</div>
+        <div class="admin-stat-label">Admin Users</div>
+        <div class="mt-3 text-center">
+          <span class="badge rounded-pill" style="background-color: var(--admin-warning-light); color: var(--admin-warning-dark); font-weight: 500;">
+            <i class="fas fa-lock me-1"></i> Privileged
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics Chart -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h5 class="admin-card-title">User Activity Overview</h5>
+        <div>
+          <select class="form-select form-select-sm" id="timeRangeSelector" style="min-width: 150px;">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-card-body">
+        <canvas id="userActivityChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <div class="admin-card h-100">
+      <div class="admin-card-header">
+        <h5 class="admin-card-title">
+          <i class="fas fa-history me-2 text-primary"></i> Recent Login Activity
+        </h5>
+        <a href="{{ url_for('admin.logs') }}" class="admin-btn admin-btn-sm admin-btn-outline">
+          <i class="fas fa-external-link-alt"></i> View All
+        </a>
+      </div>
+      <div class="admin-card-body p-0">
+        {% if login_activities %}
+          <div class="admin-logs">
+            {% for log in login_activities[:6] %}
+              <div class="admin-log-entry">
+                <div class="admin-log-timestamp">
+                  <i class="far fa-clock"></i> {{ log.split('[')[1].split(']')[0] }}
+                </div>
+                {% if 'LOGIN_SUCCESS' in log %}
+                  <div class="admin-log-type admin-log-type-success">LOGIN SUCCESS</div>
+                {% elif 'LOGIN_FAIL' in log %}
+                  <div class="admin-log-type admin-log-type-error">LOGIN FAILED</div>
+                {% else %}
+                  <div class="admin-log-type admin-log-type-info">LOGIN ACTIVITY</div>
+                {% endif %}
+                <div class="admin-log-message fw-medium">{{ log.split(':')[1].split('|')[0] }}</div>
+                <div class="admin-log-details">
+                  {% if 'User:' in log %}
+                    <span><i class="fas fa-user me-1"></i> {{ log.split('User:')[1].split('|')[0] }}</span>
+                  {% endif %}
+                  {% if 'IP:' in log %}
+                    <span class="ms-2"><i class="fas fa-globe me-1"></i> {{ log.split('IP:')[1] }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+            {% if login_activities|length > 6 %}
+              <div class="text-center py-3 border-top">
+                <a href="{{ url_for('admin.logs') }}" class="text-decoration-none">
+                  <i class="fas fa-arrow-down me-1"></i> Show more
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="p-4 text-center text-muted">
+            <div class="py-4">
+              <i class="fas fa-clipboard-list mb-3" style="font-size: 2.5rem; opacity: 0.5;"></i>
+              <h6 class="fw-bold">No Login Activity</h6>
+              <p class="text-muted mb-0">No login activity has been recorded yet.</p>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-6 mb-4">
+    <div class="admin-card h-100">
+      <div class="admin-card-header">
+        <h5 class="admin-card-title">
+          <i class="fas fa-bolt me-2 text-warning"></i> Quick Actions
+        </h5>
+      </div>
+      <div class="admin-card-body">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <a href="{{ url_for('admin.users') }}" class="admin-card p-3 text-decoration-none d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
+                  <i class="fas fa-users text-primary"></i>
+                </div>
+                <span class="fw-medium text-dark">Manage Users</span>
+              </div>
+              <i class="fas fa-chevron-right text-muted"></i>
+            </a>
+          </div>
+          <div class="col-sm-6">
+            <a href="{{ url_for('admin.logs') }}" class="admin-card p-3 text-decoration-none d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center">
+                <div class="rounded-circle bg-info bg-opacity-10 p-2 me-3">
+                  <i class="fas fa-clipboard-list text-info"></i>
+                </div>
+                <span class="fw-medium text-dark">System Logs</span>
+              </div>
+              <i class="fas fa-chevron-right text-muted"></i>
+            </a>
+          </div>
+        </div>
+        
+        <div class="admin-alert admin-alert-info">
+          <div class="admin-alert-icon">
+            <i class="fas fa-info-circle fa-2x text-info"></i>
+          </div>
+          <div class="admin-alert-content">
+            <h5 class="admin-alert-title">Welcome to the Admin Panel</h5>
+            <p class="mb-0">This dashboard provides an overview of your application's users and system activity. Use the sidebar to navigate to different admin sections.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Chart.js - User Activity Chart
+    const ctx = document.getElementById('userActivityChart').getContext('2d');
+    
+    // Use actual data from the backend
+    const labels = {{ user_activity.labels|tojson }};
+    const loginData = {{ user_activity.login_data|tojson }};
+    const registrationData = {{ user_activity.registration_data|tojson }};
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.6)');
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0.1)');
+    
+    const userActivityChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Logins',
+            data: loginData,
+            borderColor: 'rgba(79, 70, 229, 1)',
+            backgroundColor: gradient,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: 'white',
+            pointBorderColor: 'rgba(79, 70, 229, 1)',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: 'Registrations',
+            data: registrationData,
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: false,
+            pointBackgroundColor: 'white',
+            pointBorderColor: 'rgba(16, 185, 129, 1)',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              boxWidth: 10,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            titleColor: '#1e293b',
+            bodyColor: '#475569',
+            borderColor: 'rgba(226, 232, 240, 0.9)',
+            borderWidth: 1,
+            padding: 12,
+            boxPadding: 6,
+            usePointStyle: true,
+            callbacks: {
+              label: function(context) {
+                return `${context.dataset.label}: ${context.raw} users`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              borderDash: [2, 4],
+              color: 'rgba(226, 232, 240, 0.6)'
+            },
+            ticks: {
+              precision: 0,
+              stepSize: 5
+            }
+          }
+        }
+      }
+    });
+    
+    // Handle time range selector changes
+    document.getElementById('timeRangeSelector').addEventListener('change', function(e) {
+      const days = parseInt(e.target.value);
+      
+      // Fetch new data based on the selected time range from our API endpoint
+      fetch(`/admin/api/user-activity?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+          // Update chart with the new data
+          userActivityChart.data.labels = data.labels;
+          userActivityChart.data.datasets[0].data = data.login_data;
+          userActivityChart.data.datasets[1].data = data.registration_data;
+          userActivityChart.update();
+        })
+        .catch(error => {
+          console.error('Error fetching activity data:', error);
+        });
+    });
+  });
+</script>
+{% endblock %}

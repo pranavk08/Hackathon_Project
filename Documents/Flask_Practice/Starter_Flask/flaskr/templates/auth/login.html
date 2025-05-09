@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content%}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <i class="fas fa-sign-in-alt"></i>
+      </div>
+      <h1>Welcome Back</h1>
+    </div>
+    
+    <form method="post" class="auth-form">
+      <div class="form-group">
+        <label for="email"><i class="fas fa-envelope"></i> Email</label>
+        <div class="input-group">
+          <input class="form-control" type="email" name="email" id="email" placeholder="Enter your email address" required autofocus>
+          <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="password"><i class="fas fa-lock"></i> Password</label>
+        <div class="input-group">
+          <input class="form-control" type="password" name="password" id="password" placeholder="Enter your password" required>
+          <span class="input-group-text toggle-password" onclick="togglePassword('password')">
+            <i class="fas fa-eye"></i>
+          </span>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary btn-block">
+        <i class="fas fa-sign-in-alt"></i> Sign In
+      </button>
+    </form>
+    
+    <div class="auth-footer">
+      <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Create one here</a></p>
+    </div>
+  </div>
+</div>
+
+<style>
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 450px;
+  transition: transform 0.3s ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-5px);
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.auth-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.auth-icon i {
+  font-size: 2.5rem;
+  color: white;
+}
+
+.auth-header h1 {
+  color: #2d3748;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.8rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.input-group:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.input-group-text {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1rem;
+  color: #a0aec0;
+  transition: color 0.3s ease;
+}
+
+.input-group:focus-within .input-group-text {
+  color: #667eea;
+}
+
+.input-group .form-control {
+  border: none;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: #2d3748;
+  background: transparent;
+}
+
+.input-group .form-control:focus {
+  box-shadow: none;
+}
+
+.input-group .form-control::placeholder {
+  color: #a0aec0;
+}
+
+.toggle-password {
+  cursor: pointer;
+  color: #a0aec0;
+  transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+  color: #667eea;
+}
+
+.btn-block {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-top: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.2);
+}
+
+.btn-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-block:active {
+  transform: translateY(0);
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #edf2f7;
+}
+
+.auth-footer p {
+  color: #4a5568;
+  margin: 0;
+}
+
+.auth-footer a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.auth-footer a:hover {
+  color: #764ba2;
+  text-decoration: none;
+}
+
+/* Flash messages styling */
+.flash-messages {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.flash-message {
+  background: white;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+</style>
+
+<script>
+function togglePassword(inputId) {
+  const input = document.getElementById(inputId);
+  const icon = input.nextElementSibling.querySelector('i');
+  
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+  }
+}
+</script>
+{% endblock %}

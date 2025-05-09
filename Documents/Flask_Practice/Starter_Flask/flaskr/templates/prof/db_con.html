@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Hackathon Topic{% endblock %}
+
+{% block content %}
+
+{%if k%}
+<dl>
+    {% for key, value in k.items()%}
+    {% if key == "username"%}
+    <p><strong>Name: </strong> {{value}}</p>
+    {% endif %}
+    {% endfor %}
+</dl>
+{%else%}
+<h6>hello</h6>
+{%endif%}
+
+{% endblock %}

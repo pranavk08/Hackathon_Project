@@ -1,0 +1,103 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="admin-breadcrumb">
+  <a href="{{ url_for('admin.index') }}" class="admin-breadcrumb-item">Dashboard</a>
+  <span class="admin-breadcrumb-separator">/</span>
+  <a href="{{ url_for('admin.users') }}" class="admin-breadcrumb-item">Users</a>
+  <span class="admin-breadcrumb-separator">/</span>
+  <span class="admin-breadcrumb-item active">Edit User</span>
+</div>
+
+<h1 class="admin-page-title">Edit User</h1>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h5 class="admin-card-title">User Information</h5>
+      </div>
+      <div class="admin-card-body">
+        <form method="post">
+          <div class="admin-form-group">
+            <label for="username" class="admin-form-label">Username</label>
+            <input type="text" id="username" name="username" class="admin-form-control" value="{{ user.username }}" required>
+          </div>
+          
+          <div class="admin-form-group">
+            <label for="email" class="admin-form-label">Email Address</label>
+            <input type="email" id="email" name="email" class="admin-form-control" value="{{ user.email }}" required>
+          </div>
+          
+          <div class="admin-form-group">
+            <label for="phone" class="admin-form-label">Phone Number</label>
+            <input type="text" id="phone" name="phone" class="admin-form-control" value="{{ user.phone }}" required>
+          </div>
+          
+          <div class="admin-form-group">
+            <label for="password" class="admin-form-label">New Password (leave blank to keep current)</label>
+            <input type="password" id="password" name="password" class="admin-form-control">
+            <small class="text-muted">Password must be at least 8 characters long, contain an uppercase letter, a lowercase letter, and a digit.</small>
+          </div>
+          
+          <div class="admin-form-group">
+            <div class="admin-form-check">
+              <input type="checkbox" id="is_admin" name="is_admin" class="admin-form-check-input" {% if user.is_admin %}checked{% endif %}>
+              <label for="is_admin" class="admin-form-check-label">Administrator</label>
+            </div>
+            <small class="text-muted">Administrators have full access to the admin panel and all its features.</small>
+          </div>
+          
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{{ url_for('admin.users') }}" class="admin-btn admin-btn-outline">
+              <i class="fas fa-arrow-left"></i> Back to Users
+            </a>
+            <button type="submit" class="admin-btn admin-btn-primary">
+              <i class="fas fa-save"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="admin-card">
+      <div class="admin-card-header">
+        <h5 class="admin-card-title">User Profile</h5>
+      </div>
+      <div class="admin-card-body text-center">
+        <div class="profile-avatar mb-4" style="width: 100px; height: 100px; margin: 0 auto;">
+          <div class="default-avatar">
+            {{ user.username[0]|upper }}
+          </div>
+        </div>
+        
+        <h5 class="mb-1">{{ user.username }}</h5>
+        <p class="text-muted mb-3">{{ user.email }}</p>
+        
+        {% if user.is_admin %}
+          <div class="admin-badge admin-badge-primary mb-3">Administrator</div>
+        {% endif %}
+        
+        <div class="admin-alert admin-alert-info mt-4 text-start">
+          <div class="d-flex">
+            <div class="me-3">
+              <i class="fas fa-info-circle"></i>
+            </div>
+            <div>
+              <p class="mb-0">User ID: {{ user._id }}</p>
+              {% if user.created_at %}
+                <p class="mb-0">Created: {{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+              {% endif %}
+              {% if user.last_login %}
+                <p class="mb-0">Last Login: {{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
