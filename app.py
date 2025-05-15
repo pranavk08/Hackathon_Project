@@ -619,7 +619,6 @@ def shutdown_scheduler(exception=None):
 @login_required
 def appointment_reschedule(appointment_id):
     try:
-        # Get the appointment
         appointment = Appointment.get_by_id(appointment_id)
         if not appointment:
             flash('Appointment not found', 'error')
